@@ -107,7 +107,7 @@ def handler(req):
             if link:
                 text.append('<A href="%s" text="mutable tag: %s">symlink</A>' % (link, link))
             if blob:
-                text.append('<A href="%s" text="immutable hash: %s">context</A>' % (blob, blob))
+                text.append('<A href="%s" text="immutable hash: %s">permalink</A>' % (blob, blob))
                 text.append('<INPUT type="hidden" name="prev" value="%s">' % blob)
         text.append('<INPUT type="submit" id="submit" value="store">')
         text.append('</FORM>')
