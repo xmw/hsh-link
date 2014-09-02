@@ -102,24 +102,24 @@ def handler(req):
 </head>
 <body onLoad="hide()">""" % req.headers_in['Host'],
         '<div id="container">',
-        '<FORM action="%s" method="GET" enctype="multipart/form-data">' % (link or '/'),
+        '<form action="%s" method="GET" enctype="multipart/form-data">' % (link or '/'),
         '<div id="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="show()">%s</textarea></div>' % (new_content or content),
         '<div id="control"><A href="/" title="start from scratch/">new</A>',
         '<input type="text" placeholder="link name ..." name="link" oninput="show()" value="%s">' % (link or "")]
         if content:
             if link:
-                text.append('<A href="/%s" title="mutable tag: %s/%s">symlink</A>' % (link, base_url, link))
-                text.append('<A href="/%s?raw" title="mutable tag: %s/%s?raw">(raw)</A>' % (link, base_url, link))
+                text.append('<a href="/%s" title="mutable tag: %s/%s">symlink</A>' % (link, base_url, link))
+                text.append('<a href="/%s?raw" title="mutable tag: %s/%s?raw">(raw)</A>' % (link, base_url, link))
             if blob:
-                text.append('<A href="/%s" title="immutable hash: %s/%s">permalink</A>' % (blob, base_url, blob))
-                text.append('<A href="/%s?raw" title="immutable hash: %s/%s?raw">(raw)</A>' % (blob, base_url, blob))
-                text.append('<INPUT type="hidden" name="prev" value="%s">' % blob)
-        text.append('<INPUT type="submit" id="submit" value="%s">' % \
+                text.append('<a href="/%s" title="immutable hash: %s/%s">permalink</A>' % (blob, base_url, blob))
+                text.append('<a href="/%s?raw" title="immutable hash: %s/%s?raw">(raw)</A>' % (blob, base_url, blob))
+                text.append('<input type="hidden" name="prev" value="%s">' % blob)
+        text.append('<input type="submit" id="submit" value="%s">' % \
             (content and 'update' or 'save'))
         text.append("""</div>
 </form>
-<div id="footer">(c) http://xmw.de/ 2014</div>
-<div id="validator"><a href="http://validator.w3.org/check?uri=referer">validator</a></div>
+<div id="footer">(c) <a href="http://xmw.de/">xmw.de</a> 2014 <a href="https://github.com/xmw/hsh-link">sources</a>
+<a href="http://validator.w3.org/check?uri=referer">html5</a></div>
 </div>
 </body>
 </html>""")
