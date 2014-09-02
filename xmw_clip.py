@@ -41,6 +41,7 @@ def write_storage(fn, data):
     
        
 def handler(req):
+    base_url = "http://%s/" % req.headers_in['Host']
     agent = req.headers_in.get('User-Agent', '').lower()
     html = agent.count('mozilla') or agent.count('opera') or agent.count('validator')
     var = mod_python.util.FieldStorage(req, keep_blank_values=True)
@@ -103,11 +104,14 @@ def handler(req):
         text = []
         text.append('<FORM enctype="multipart/form-data" method="POST" action="%s">' % (link or '/'))
         text.append('<TEXTAREA placeholder="Start typing ..." border="0" cols="81" rows="24" name="content" oninput="show()">%s</TEXTAREA><BR>' % (new_content or content))
+        text.append('<A href="/" title="start from scratch: %s/">new</A>' % base_url)
         if content:
             if link:
-                text.append('<A href="%s" text="mutable tag: %s">symlink</A>' % (link, link))
+                text.append('<A href="/%s" title="mutable tag: %s/%s">symlink</A>' % (link, base_url, link))
+                text.append('<A href="/%s?raw" title="mutable tag: %s/%s?raw">(raw)</A>' % (link, base_url, link))
             if blob:
-                text.append('<A href="%s" text="immutable hash: %s">permalink</A>' % (blob, blob))
+                text.append('<A href="/%s" title="immutable hash: %s/%s">permalink</A>' % (blob, base_url, blob))
+                text.append('<A href="/%s?raw" title="immutable hash: %s/%s?raw">(raw)</A>' % (blob, base_url, blob))
                 text.append('<INPUT type="hidden" name="prev" value="%s">' % blob)
         text.append('<INPUT type="submit" id="submit" value="store">')
         text.append('</FORM>')
@@ -116,7 +120,7 @@ def handler(req):
         encapsulate(req, '\n'.join(text), True)
     else:
         if new_content:
-            encapsulate(req, req.headers_in['Host'] + '/' + new_blob + '\n', False)
+            encapsulate(req, "%s/%s\n" % (base_url, new_blob), False)
         else:
             encapsulate(req, content, False)
             
