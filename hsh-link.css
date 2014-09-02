@@ -1,0 +1,12 @@
+@font-face { font-family:dina; src:url(http://xmw.de/.artwork/dina10px.ttf); }
+@font-face { font-family:dinabf; src:url(http://xmw.de/.artwork/dina10pxbold.ttf); }
+body { font-family:dina; width:100%; background-color:#2d2d2d; color:#729fcf; }
+div { text-align: center; }
+textarea { border-style: None; background-color: black; color:#729fcf; }
+input { border-style: None; background-color: black; color:#729fcf; }
+a { text-decoration:none; }
+a:link {    color:#b8cfe7; }
+a:visited { color:#b8cfe7; }
+a:active {  color:#b8cfe7; }
+a:hover {   color:white; }
+#d#container { width:80%; background-color:red; }

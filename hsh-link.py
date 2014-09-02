@@ -2,30 +2,9 @@
 # copyright Michael Weber (michael at xmw dot de) 2014
 
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX
-from mod_python.apache import OK, HTTP_NOT_FOUND
+from mod_python.apache import OK, HTTP_NOT_FOUND, HTTP_BAD_REQUEST
 
 import hashlib, mod_python, os
-
-
-def encapsulate(req, raw, html=False):
-    if html:
-        req.content_type = "text/html; charset=utf-8"
-        req.write('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" ' + \
-            '"http://www.w3.org/TR/html4/loose.dtd">\n')
-        req.write('<HTML>\n<HEAD>\n<META http-equiv="Content-Type" content="text/html; charset=utf-8">\n')
-        req.write('<script>function hide() { document.getElementById("submit").style.visibility="hidden"; }')
-        req.write('  function show() { document.getElementById("submit").style.visibility="inherit"; }</script>')
-        req.write('<TITLE>%s</TITLE>\n</HEAD>\n<BODY onLoad="hide()">\n<CENTER>' % req.headers_in['Host'])
-    else:
-        req.content_type = "text/plain; charset=utf-8"
-
-    req.write(raw)
-
-    if html:
-        req.write('<BR>\n(c) xmw.de 2014<BR>\n<A href="http://validator.w3.org/check?uri=referer">' + \
-            '<FONT color="#FFFFFF"><IMG src="http://www.w3.org/Icons/valid-html401-blue"' + \
-	    'alt="Valid HTML 4.01 Transitional" height="31" width="88"></FONT></A>\n</CENTER>\n</BODY>\n</HTML>\n')
- 
 
 def read_storage(fn):
     if os.path.exists(fn):
@@ -43,21 +22,25 @@ def write_storage(fn, data):
 def handler(req):
     base_url = "http://%s/" % req.headers_in['Host']
     agent = req.headers_in.get('User-Agent', '').lower()
-    html = agent.count('mozilla') or agent.count('opera') or agent.count('validator')
     var = mod_python.util.FieldStorage(req, keep_blank_values=True)
-    if var.getlist('raw'):
+    if not var.getlist('raw') and (agent.count('mozilla') or agent.count('opera') or agent.count('validator')):
+        html = True
+        req.content_type = "text/html; charset=utf-8"
+    else:
         html = False
+        req.content_type = "text/plain; charset=utf-8"
 
     # new_content
     if req.method in ('DELETE', 'PUT'):
-        encapsulate(req, "future DELETE and PUT not yet implented.\n", html)
-        return OK
+        req.write("future DELETE and PUT not yet implented.\n")
+        return HTTP_BAD_REQUEST
     elif req.method == 'GET':
         new_content = var.getfirst('content')
+        
     elif req.method == 'POST':
         if req.args:
-            encapsulate(req, "Mixed POST and GET not supported.\n", html)
-            return OK
+            req.write("Mixed POST and GET not supported.\n")
+            return HTTP_BAD_REQUEST
         new_content = var.getfirst('content')
 
     # lookup
@@ -97,14 +80,32 @@ def handler(req):
             if link:
                 write_storage(os.path.join(LINK_DIR, link), new_blob)
             if html:
-                mod_python.util.redirect(req, "/%s" % (link or new_blob), new_blob)
+                mod_python.util.redirect(req, "/%s?link=%s" % (link or new_blob, var.getfirst('link')), new_blob)
+            content = new_content
+            blob = new_blob
+    new_link = var.getfirst('link')
+    if blob and new_link and new_link != link:
+        write_storage(os.path.join(LINK_DIR, new_link), blob)
+        if html:
+            mod_python.util.redirect(req, "/%s" % new_link, new_link)
     
     #output
+    text = []
     if html:
-        text = []
-        text.append('<FORM enctype="multipart/form-data" method="POST" action="%s">' % (link or '/'))
-        text.append('<TEXTAREA placeholder="Start typing ..." border="0" cols="81" rows="24" name="content" oninput="show()">%s</TEXTAREA><BR>' % (new_content or content))
-        text.append('<A href="/" title="start from scratch: %s/">new</A>' % base_url)
+        text += ["""<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" type="text/css" href="hsh-link.css">
+<script src="hsh-link.js"></script>
+<title>%s</title>
+</head>
+<body onLoad="hide()">""" % req.headers_in['Host'],
+        '<div id="container">',
+        '<FORM action="%s" method="GET" enctype="multipart/form-data">' % (link or '/'),
+        '<div id="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="show()">%s</textarea></div>' % (new_content or content),
+        '<div id="control"><A href="/" title="start from scratch/">new</A>',
+        '<input type="text" placeholder="link name ..." name="link" oninput="show()" value="%s">' % (link or "")]
         if content:
             if link:
                 text.append('<A href="/%s" title="mutable tag: %s/%s">symlink</A>' % (link, base_url, link))
@@ -113,16 +114,19 @@ def handler(req):
                 text.append('<A href="/%s" title="immutable hash: %s/%s">permalink</A>' % (blob, base_url, blob))
                 text.append('<A href="/%s?raw" title="immutable hash: %s/%s?raw">(raw)</A>' % (blob, base_url, blob))
                 text.append('<INPUT type="hidden" name="prev" value="%s">' % blob)
-        text.append('<INPUT type="submit" id="submit" value="store">')
-        text.append('</FORM>')
-        if var.getlist('debug'):
-            text.append(str(req.headers_in))
-        encapsulate(req, '\n'.join(text), True)
+        text.append('<INPUT type="submit" id="submit" value="%s">' % \
+            (content and 'update' or 'save'))
+        text.append("""</div>
+</form>
+<div id="footer">(c) http://xmw.de/ 2014</div>
+<div id="validator"><a href="http://validator.w3.org/check?uri=referer">validator</a></div>
+</div>
+</body>
+</html>""")
     else:
         if new_content:
-            encapsulate(req, "%s/%s\n" % (base_url, new_blob), False)
+            text.append("%s/%s\n" % (base_url, new_blob))
         else:
-            encapsulate(req, content, False)
-            
-
+            text.append(content)
+    req.write("\n".join(text))
     return OK
