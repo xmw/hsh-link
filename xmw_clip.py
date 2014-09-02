@@ -116,7 +116,7 @@ def handler(req):
         encapsulate(req, '\n'.join(text), True)
     else:
         if new_content:
-            encapsulate(req, req.headers_in['Host'] + '/' + new_blob, False)
+            encapsulate(req, req.headers_in['Host'] + '/' + new_blob + '\n', False)
         else:
             encapsulate(req, content, False)
             
