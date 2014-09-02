@@ -1,7 +1,7 @@
 # vim: tabstop=4
 # copyright Michael Weber (michael at xmw dot de) 2014
 
-from config import STORAGE_DIR, LINK_DIR
+from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX
 from mod_python.apache import OK, HTTP_NOT_FOUND
 
 import hashlib, mod_python, os
@@ -88,6 +88,8 @@ def handler(req):
 
     # store
     if new_content:
+        if len(new_content) > FILE_SIZE_MAX:
+            return mod_python.apache.HTTP_REQUEST_ENTITY_TOO_LARGE
         new_blob = hashlib.sha1(new_content).hexdigest()
         if new_blob != blob:
             write_storage(os.path.join(STORAGE_DIR, new_blob), new_content)
