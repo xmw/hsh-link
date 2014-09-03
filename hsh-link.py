@@ -1,7 +1,8 @@
 # vim: tabstop=4 fileencoding=utf-8
 # copyright Michael Weber (michael at xmw dot de) 2014
 
-from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED
+from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_HOST, BASE_PATH
+BASE_URL = BASE_PROTO + BASE_HOST + BASE_PATH
 OUTPUT = 'default', 'raw', 'html', 'link', 'qr'
 
 import base64, hashlib, mod_python.apache, os, qrencode, PIL.ImageOps
@@ -55,7 +56,6 @@ def get_last_value(fieldstorage, name, default=None):
     return default
        
 def handler(req):
-    base_url = "http://%s" % req.headers_in['Host']
     var = mod_python.util.FieldStorage(req, keep_blank_values=True)
 
     #guess output format
@@ -85,7 +85,7 @@ def handler(req):
 
     # data_hash, link_name or abrev. data_hash
     data, data_hash, link_name, link_hash = None, None, None, None
-    obj = os.path.normpath(req.uri)[1:]
+    obj = os.path.normpath(req.uri)[len(BASE_PATH):]
     if obj == 'robots.txt' or obj.startswith('.artwork/'):
         return mod_python.apache.DECLINED
     if is_storage(STORAGE_DIR, obj):
@@ -160,22 +160,23 @@ def handler(req):
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<link rel="stylesheet" type="text/css" href="/.artwork/hsh-link.css">
-<script src="/.artwork/hsh-link.js"></script>
+<link rel="stylesheet" type="text/css" href="%s.artwork/hsh-link.css">
+<script src="%s.artwork/hsh-link.js"></script>
 <title>%s</title>
 </head>
-<body onLoad="body_loaded()">""" % req.headers_in['Host'],
+<body onLoad="body_loaded()">""" % (BASE_PATH, BASE_PATH, BASE_URL),
         '<div class="container">',
-        '<form action="%s" method="POST" enctype="multipart/form-data">' % (link_name or '/'),
-        '<div class="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % data,
-        '<div class="control"><A href="/" title="start from scratch/">clear</A>',
-        '| symlink: <input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' % (link_name or "")]
+        '<form action="%s" method="POST" enctype="multipart/form-data">' % (link_name or BASE_PATH),
+        '<div class="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % (data or ""),
+        '<div class="control"><a href="%s" title="start from scratch/">clear</a> | ' % BASE_PATH,
+        '%s: <input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' %
+            (link_name and ('<a href="%s%s" title="variable named link">symlink</a>' % (BASE_PATH, link_name)) or "symlink", link_name or "")]
         if data_hash:
             short_hash, css_hide = uniq_name(STORAGE_DIR, data_hash), ''
         else:
             short_hash, css_hide = '', ' style="visibility: hidden;"'
-        text.append('<a href="/%s" title="immutable hash: %s/%s"%s>permalink</a>' % (data_hash, base_url, data_hash, css_hide))
-        text.append('<a href="/%s" title="immutable hash: %s/%s" %s>short</A>' % (short_hash, base_url, short_hash, css_hide))
+        text.append('<a href="%s%s" title="immutable hash: %s%s"%s>permalink</a>' % (BASE_PATH, data_hash, BASE_URL, data_hash, css_hide))
+        text.append('<a href="%s%s" title="immutable hash: %s%s"%s>short</a>' % (BASE_PATH, short_hash, BASE_URL, short_hash, css_hide))
         if data_hash:
             text.append('<input type="hidden" name="prev" value="%s">' % data_hash)
         text.append(' | output: <select name="output" id="output" onchange="output_selected()">')
@@ -192,7 +193,7 @@ def handler(req):
 </html>
 """)
     elif output == 'qr':
-        d = base_url + '/' + (link_name or data_hash or '')
+        d = BASE_URL + (link_name or data_hash or '')
         version, size, img = qrencode.encode(d, hint=qrencode.QR_MODE_8, case_sensitive=True)
         img = PIL.ImageOps.expand(img, border=1, fill='white')
         if agent == 'graphic':
@@ -227,11 +228,11 @@ def handler(req):
         if not data_hash:
             return mod_python.apache.HTTP_NOT_FOUND
         req.content_type = "text/plain; charset=utf-8"
-        text.append("%s/%s\n" % (base_url, data_hash))
+        text.append("%s%s\n" % (BASE_URL, data_hash))
     elif output == 'default':
         if new_data or new_link_name:
             req.content_type = "text/plain; charset=utf-8"
-            text.append("%s/%s\n" % (base_url, data_hash))
+            text.append("%s%s\n" % (BASE_URL, data_hash))
         else:
             if data == None and data_hash != None:
                 data = read_storage(STORAGE_DIR, data_hash)
