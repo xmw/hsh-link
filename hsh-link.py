@@ -124,15 +124,15 @@ def handler(req):
         '<form action="%s" method="POST" enctype="multipart/form-data">' % (link_name or '/'),
         '<div class="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % (new_content or content),
         '<div class="control"><A href="/" title="start from scratch/">new</A>',
-        'symlink:<input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' % (link_name or "")]
+        '| symlink: <input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' % (link_name or "")]
         if content:
             if blob:
                 text.append('<a href="/%s" title="immutable hash: %s/%s">permalink</A>' % (blob, base_url, blob))
                 text.append('<input type="hidden" name="prev" value="%s">' % blob)
-            text.append(' | output: <select name="output" id="output" onchange="output_selected()">')
-            for output_ in OUTPUT:
-                text.append('<option value="%s"%s>%s</option>' % (output_, output == output_ and ' selected' or '', output_))
-            text.append('</select>')
+        text.append(' | output: <select name="output" id="output" onchange="output_selected()">')
+        for output_ in OUTPUT:
+            text.append('<option value="%s"%s>%s</option>' % (output_, output == output_ and ' selected' or '', output_))
+        text.append('</select>')
         text.append('<input type="submit" id="store" title="safe changed data" value="%s">' % \
             (content and 'update' or 'save'))
         text.append("""</div>
