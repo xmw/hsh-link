@@ -1,16 +1,23 @@
+/*
+	vim: tabstop=4
+*/
 @font-face { font-family:dina; src:url(/.artwork/dina10px.ttf); }
 @font-face { font-family:dinabf; src:url(/.artwork/dina10pxbold.ttf); }
-body { font-family:dina; width:100%; background-color:#2d2d2d; color:#729fcf; }
-div { text-align: center; }
-@media only screen and (max-device-width: 600px) {
-	div { text-align: left; }
+textarea,input,select { border-style: None; }
+@media screen and (min-device-width: 600px){
+	.container { text-align: center; }
+	body { width:100%; }
 }
-textarea { border-style: None; background-color: black; color:#729fcf; }
-input { border-style: None; background-color: black; color:#729fcf; }
-select { border-style: None; background-color: black; color:#729fcf; }
-a { text-decoration:none; }
-a:link {    color:#b8cfe7; }
-a:visited { color:#b8cfe7; }
-a:active {  color:#b8cfe7; }
-a:hover {   color:white; }
-#d#container { width:80%; background-color:red; }
+@media screen {
+	body { font-family:dina; background-color:#2d2d2d; color:#729fcf; }
+	textarea,input,select { 
+		background-color: black; color:#729fcf;
+	}
+	a { text-decoration:none; }
+	a:link,a:visited,a:active { color:#b8cfe7; }
+	a:hover { color:white; }
+}
+
+@media print {
+	.control,.footer{ display: none; }
+}

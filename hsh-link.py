@@ -126,10 +126,10 @@ def handler(req):
 <title>%s</title>
 </head>
 <body onLoad="body_loaded()">""" % req.headers_in['Host'],
-        '<div id="container">',
+        '<div class="container">',
         '<form action="%s" method="POST" enctype="multipart/form-data">' % (link_name or '/'),
-        '<div id="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % (new_content or content),
-        '<div id="control"><A href="/" title="start from scratch/">new</A>',
+        '<div class="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % (new_content or content),
+        '<div class="control"><A href="/" title="start from scratch/">new</A>',
         'symlink:<input type="text" placeholder="enter name" name="link" oninput="data_modified()" value="%s">' % (link_name or "")]
         if content:
             if blob:
@@ -143,7 +143,7 @@ def handler(req):
             (content and 'update' or 'save'))
         text.append("""</div>
 </form>
-<div id="footer">(c) <a href="http://xmw.de/">xmw.de</a> 2014 <a href="https://github.com/xmw/hsh-link">sources</a>
+<div class="footer">(c) <a href="http://xmw.de/">xmw.de</a> 2014 <a href="https://github.com/xmw/hsh-link">sources</a>
 <a href="http://validator.w3.org/check?uri=referer">html5</a></div>
 </div>
 </body>
