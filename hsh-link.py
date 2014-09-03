@@ -2,7 +2,7 @@
 # copyright Michael Weber (michael at xmw dot de) 2014
 
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED
-OUTPUT = 'raw', 'html', 'link', 'qr'
+OUTPUT = 'default', 'raw', 'html', 'link', 'qr'
 
 import base64, hashlib, mod_python.apache, os, qrencode, PIL.ImageOps
 
@@ -29,7 +29,7 @@ def handler(req):
     var = mod_python.util.FieldStorage(req, keep_blank_values=True)
 
     #guess output format
-    output = "raw"
+    output = 'default'
     agent = req.headers_in.get('User-Agent', '').lower()
     if agent.count('mozilla') or agent.count('opera') or agent.count('validator'):
         output = 'html'
@@ -141,9 +141,6 @@ def handler(req):
 </div>
 </body>
 </html>""")
-    elif output == 'link':
-        req.content_type = "text/plain; charset=utf-8"
-        text.append("%s/%s" % (base_url, link_name or blob))
     elif output == 'qr':
         version, size, img = qrencode.encode(base_url + '/' + (link_name or blob or ''), hint=qrencode.QR_MODE_8, case_sensitive=True)
         img = PIL.ImageOps.expand(img, border=1, fill='white')
@@ -176,7 +173,9 @@ def handler(req):
         req.content_type = "text/plain; charset=utf-8"
         req.write(content)
     else:
-        return mod_python.apache.HTTP_BAD_REQUEST
+        # either 'link' or unspecified w/o graphic browser
+        req.content_type = "text/plain; charset=utf-8"
+        text.append("%s/%s\n" % (base_url, blob))
 
     req.write("\n".join(text) + '\n')
     return mod_python.apache.OK
