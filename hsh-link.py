@@ -175,9 +175,10 @@ def handler(req):
         req.content_type = "text/plain; charset=utf-8"
         req.write(content)
     else:
+        if not blob:
+            return mod_python.apache.HTTP_NOT_FOUND
         # either 'link' or unspecified w/o graphic browser
         req.content_type = "text/plain; charset=utf-8"
         text.append("%s/%s\n" % (base_url, blob))
-
     req.write("\n".join(text))
     return mod_python.apache.OK
