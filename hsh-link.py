@@ -82,6 +82,7 @@ def handler(req):
             new_content = content + append_content
 
     # store
+    new_blob = None
     if new_content:
         if len(new_content) > FILE_SIZE_MAX:
             return mod_python.apache.HTTP_REQUEST_ENTITY_TOO_LARGE
@@ -90,14 +91,23 @@ def handler(req):
             write_storage(os.path.join(STORAGE_DIR, new_blob), new_content)
             content, blob = new_content, new_blob
     new_link_name = get_last_value(var, 'link')
-    if new_link_name and new_link_name != link_name:
-        new_link_hash = base64.urlsafe_b64encode(hashlib.sha1(new_link_name).digest())
-        write_storage(os.path.join(LINK_DIR, new_link_hash), blob)
-        link_name, link_hash = new_link_name, new_link_hash
-    else:
+    if new_link_name == link_name:
         new_link_name = None
-    if html and (new_content or new_link_name):
-        mod_python.util.redirect(req, "/%s" % new_link_name or link_name or new_blob)
+    if new_link_name:
+        new_link_hash = base64.urlsafe_b64encode(hashlib.sha1(new_link_name).digest())
+        if blob:
+            write_storage(os.path.join(LINK_DIR, new_link_hash), blob)
+        link_name, link_hash = new_link_name, new_link_hash
+    if new_blob and link_hash:
+        write_storage(os.path.join(LINK_DIR, link_hash), new_blob)
+    if html:
+        if new_link_name:
+            mod_python.util.redirect(req, "/%s" % new_link_name)
+        elif new_blob:
+            if link_name:
+                mod_python.util.redirect(req, "/%s" % link_name)
+            else:
+                mod_python.util.redirect(req, "/%s" % new_blob)
     
     #output
     text = []
@@ -110,24 +120,21 @@ def handler(req):
 <script src="hsh-link.js"></script>
 <title>%s</title>
 </head>
-<body onLoad="hide()">""" % req.headers_in['Host'],
+<body onLoad="body_loaded()">""" % req.headers_in['Host'],
         '<div id="container">',
         '<form action="%s" method="POST" enctype="multipart/form-data">' % (link_name or '/'),
-        '<div id="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="show()">%s</textarea></div>' % (new_content or content),
+        '<div id="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % (new_content or content),
         '<div id="control"><A href="/" title="start from scratch/">new</A>',
-        '<input type="text" placeholder="link name ..." name="link" oninput="show()" value="%s">' % (link_name or "")]
+        'symlink:<input type="text" placeholder="enter name" name="link" oninput="data_modified()" value="%s">' % (link_name or "")]
         if content:
-            if link_name:
-                text.append('<a href="/%s" title="mutable tag: %s/%s">symlink</A>' % (link_name, base_url, link_name))
             if blob:
                 text.append('<a href="/%s" title="immutable hash: %s/%s">permalink</A>' % (blob, base_url, blob))
                 text.append('<input type="hidden" name="prev" value="%s">' % blob)
-            text.append(' | view:<a href="?type=raw" title="?type=raw">raw</A>')
-            text.append('<select name="mime">')
-            for mime_ in 'text/html', 'text/plain':
-                text.append('<option select value="%s"%s>%s</option>' % (mime_, mime == mime_ and ' selected' or '', mime_))
+            text.append(' | view: <select name="mime" id="mime" onchange="mime_selected()">')
+            for mime_ in 'text/plain', 'text/html':
+                text.append('<option value="%s"%s>%s</option>' % (mime_, mime == mime_ and ' selected' or '', mime_))
             text.append('</select>')
-        text.append('<input type="submit" id="submit" title="safe changed data" value="%s">' % \
+        text.append('<input type="submit" id="store" title="safe changed data" value="%s">' % \
             (content and 'update' or 'save'))
         text.append("""</div>
 </form>
