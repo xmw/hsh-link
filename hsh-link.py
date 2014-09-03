@@ -37,6 +37,12 @@ def find_storage(repo, partfn):
     if not cand:
         return None
     return sorted(cand, key=lambda fn: os.lstat(os.path.join(d, fn)).st_ctime)[0]
+
+def uniq_name(repo, fn):
+    for i in range(4, len(fn)):
+        if find_storage(repo, fn[:i]) == fn:
+            return fn[:i]
+    return fn
     
 def get_last_value(fieldstorage, name, default=None):
     cand = fieldstorage.getlist(name)
@@ -143,6 +149,8 @@ def handler(req):
         if content:
             if blob:
                 text.append('<a href="/%s" title="immutable hash: %s/%s">permalink</A>' % (blob, base_url, blob))
+                short = uniq_name(STORAGE_DIR, blob)
+                text.append('<a href="/%s" title="immutable hash: %s/%s">short</A>' % (short, base_url, short))
                 text.append('<input type="hidden" name="prev" value="%s">' % blob)
         text.append(' | output: <select name="output" id="output" onchange="output_selected()">')
         for output_ in OUTPUT:
