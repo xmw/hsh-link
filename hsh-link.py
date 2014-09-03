@@ -88,7 +88,9 @@ def handler(req):
     obj = os.path.normpath(req.uri)[len(BASE_PATH):]
     if obj == 'robots.txt' or obj.startswith('.artwork/'):
         return mod_python.apache.DECLINED
-    if is_storage(STORAGE_DIR, obj):
+    if not len(obj):
+        pass
+    elif is_storage(STORAGE_DIR, obj):
         data_hash = obj
     else:
         t = hsh(obj)
