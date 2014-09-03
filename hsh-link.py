@@ -150,7 +150,7 @@ def handler(req):
 </html>""")
     elif output == 'link':
         req.content_type = "text/plain; charset=utf-8"
-        text.append("%s/%s\n" % (base_url, obj))
+        text.append("%s/%s" % (base_url, obj))
     elif output == 'qr':
         version, size, img = qrencode.encode(base_url + '/' + (link_name or blob or ''), hint=qrencode.QR_MODE_8, case_sensitive=True)
         img = PIL.ImageOps.expand(img, border=1, fill='white')
