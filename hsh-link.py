@@ -56,6 +56,8 @@ def handler(req):
 
     # lookup
     obj = os.path.normpath(req.uri)[1:]
+    if obj == 'robots.txt' or obj.startswith('.artwork/'):
+        return mod_python.apache.DECLINED
     link_name = None
     link_hash = None
     blob = None
