@@ -4,7 +4,7 @@
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX
 from mod_python.apache import OK, HTTP_NOT_FOUND, HTTP_BAD_REQUEST
 
-import hashlib, mod_python, os
+import base64, hashlib, mod_python, os
 
 def read_storage(fn):
     if os.path.exists(fn):
@@ -74,7 +74,7 @@ def handler(req):
     if new_content:
         if len(new_content) > FILE_SIZE_MAX:
             return mod_python.apache.HTTP_REQUEST_ENTITY_TOO_LARGE
-        new_blob = hashlib.sha1(new_content).hexdigest()
+        new_blob = base64.urlsafe_b64encode(hashlib.sha1(new_content).digest())
         if new_blob != blob:
             write_storage(os.path.join(STORAGE_DIR, new_blob), new_content)
             if link:
