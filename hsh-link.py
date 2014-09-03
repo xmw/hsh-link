@@ -1,10 +1,11 @@
-# vim: tabstop=4
+# vim: tabstop=4 fileencoding=utf-8
 # copyright Michael Weber (michael at xmw dot de) 2014
 
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED
+OUTPUT = 'raw', 'html', 'link', 'qr'
 from mod_python.apache import OK, HTTP_NOT_FOUND, HTTP_BAD_REQUEST
 
-import base64, hashlib, mod_python, os
+import base64, hashlib, mod_python, os, qrencode, PIL.ImageOps
 
 def read_storage(fn):
     if os.path.exists(fn):
@@ -25,19 +26,20 @@ def get_last_value(fieldstorage, name, default=None):
     return default
        
 def handler(req):
-    base_url = "http://%s/" % req.headers_in['Host']
+    base_url = "http://%s" % req.headers_in['Host']
     var = mod_python.util.FieldStorage(req, keep_blank_values=True)
 
-    #guess mime
-    mime = "text/plain"
+    #guess output format
+    output = "raw"
     agent = req.headers_in.get('User-Agent', '').lower()
     if agent.count('mozilla') or agent.count('opera') or agent.count('validator'):
-        mime = 'text/html'
-    mime = get_last_value(var, 'mime', mime)
-    if not mime in MIME_ALLOWED:
+        output = 'html'
+        agent = 'graphic'
+    else:
+        agent = 'text'
+    output = get_last_value(var, 'output', output)
+    if not output in OUTPUT:
         return HTTP_BAD_REQUEST
-    req.content_type = mime + "; charset=utf-8"
-    html = mime == 'text/html' #TODO drop me
 
     # new_content
     if req.method in ('DELETE', 'PUT'):
@@ -100,7 +102,7 @@ def handler(req):
         link_name, link_hash = new_link_name, new_link_hash
     if new_blob and link_hash:
         write_storage(os.path.join(LINK_DIR, link_hash), new_blob)
-    if html:
+    if output == 'html':
         if new_link_name:
             mod_python.util.redirect(req, "/%s" % new_link_name)
         elif new_blob:
@@ -111,7 +113,8 @@ def handler(req):
     
     #output
     text = []
-    if html:
+    if output == 'html':
+        req.content_type = "text/html; charset=utf-8"
         text += ["""<!DOCTYPE html>
 <html>
 <head>
@@ -130,9 +133,9 @@ def handler(req):
             if blob:
                 text.append('<a href="/%s" title="immutable hash: %s/%s">permalink</A>' % (blob, base_url, blob))
                 text.append('<input type="hidden" name="prev" value="%s">' % blob)
-            text.append(' | view: <select name="mime" id="mime" onchange="mime_selected()">')
-            for mime_ in 'text/plain', 'text/html':
-                text.append('<option value="%s"%s>%s</option>' % (mime_, mime == mime_ and ' selected' or '', mime_))
+            text.append(' | output: <select name="output" id="output" onchange="output_selected()">')
+            for output_ in OUTPUT:
+                text.append('<option value="%s"%s>%s</option>' % (output_, output == output_ and ' selected' or '', output_))
             text.append('</select>')
         text.append('<input type="submit" id="store" title="safe changed data" value="%s">' % \
             (content and 'update' or 'save'))
@@ -143,10 +146,28 @@ def handler(req):
 </div>
 </body>
 </html>""")
-    else:
-        if new_content:
-            text.append("%s/%s\n" % (base_url, new_blob))
+    elif output == 'link':
+        req.content_type = "text/plain; charset=utf-8"
+        text.append("%s/%s\n" % (base_url, obj))
+    elif output == 'qr':
+        version, size, img = qrencode.encode(base_url + '/' + (link_name or blob or ''), hint=qrencode.QR_MODE_8, case_sensitive=True)
+        img = PIL.ImageOps.expand(img, border=1, fill='white')
+        if agent == 'graphic':
+            req.content_type = "image/png; charset=utf-8"
+            img.resize((img.size[0] * 4, img.size[1] * 4), PIL.Image.NEAREST).save(req, 'PNG')
         else:
-            text.append(content)
-    req.write("\n".join(text))
+            req.content_type = "text/plain; charset=utf-8"
+            pixels = img.load()
+            width, height = img.size
+            for row in range(height):
+                for col in range(width):
+                    req.write(pixels[col, row] and '██' or '  ')
+                req.write('\n')
+    elif output == 'raw':
+        req.content_type = "text/plain; charset=utf-8"
+        req.write(content)
+    else:
+        return HTTP_BAD_REQUEST
+
+    req.write("\n".join(text) + '\n')
     return OK

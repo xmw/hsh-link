@@ -9,8 +9,8 @@ function data_modified() {
 	modified = 1;
 }
 
-function mime_selected() {
+function output_selected() {
     if (modified == 0) {
-	window.location.href="?mime=" + document.getElementById("mime").value;
+	window.location.href="?output=" + document.getElementById("output").value;
     }
 }
