@@ -2,6 +2,9 @@
 @font-face { font-family:dinabf; src:url(/.artwork/dina10pxbold.ttf); }
 body { font-family:dina; width:100%; background-color:#2d2d2d; color:#729fcf; }
 div { text-align: center; }
+@media only screen and (max-device-width: 600px) {
+	div { text-align: left; }
+}
 textarea { border-style: None; background-color: black; color:#729fcf; }
 input { border-style: None; background-color: black; color:#729fcf; }
 select { border-style: None; background-color: black; color:#729fcf; }
