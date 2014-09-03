@@ -3,9 +3,8 @@
 
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED
 OUTPUT = 'raw', 'html', 'link', 'qr'
-from mod_python.apache import OK, HTTP_NOT_FOUND, HTTP_BAD_REQUEST
 
-import base64, hashlib, mod_python, os, qrencode, PIL.ImageOps
+import base64, hashlib, mod_python.apache, os, qrencode, PIL.ImageOps
 
 def read_storage(fn):
     if os.path.exists(fn):
@@ -39,12 +38,12 @@ def handler(req):
         agent = 'text'
     output = get_last_value(var, 'output', output)
     if not output in OUTPUT:
-        return HTTP_BAD_REQUEST
+        return mod_python.apache.HTTP_BAD_REQUEST
 
     # new_content
     if req.method in ('DELETE', 'PUT'):
         req.write("future DELETE and PUT not yet implented.\n")
-        return HTTP_BAD_REQUEST
+        return mod_python.apache.HTTP_BAD_REQUEST
     elif req.method in ('GET', 'POST'):
         new_content = get_last_value(var, 'content')
 
@@ -177,7 +176,7 @@ def handler(req):
         req.content_type = "text/plain; charset=utf-8"
         req.write(content)
     else:
-        return HTTP_BAD_REQUEST
+        return mod_python.apache.HTTP_BAD_REQUEST
 
     req.write("\n".join(text) + '\n')
-    return OK
+    return mod_python.apache.OK
