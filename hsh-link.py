@@ -45,7 +45,8 @@ def handler(req):
 
     # lookup
     obj = os.path.normpath(req.uri)[1:]
-    link = None
+    link_name = None
+    link_hash = None
     blob = None
     if obj:
         if os.path.exists(os.path.join(STORAGE_DIR, obj)):
@@ -55,9 +56,10 @@ def handler(req):
             if cand:
                 blob = sorted(cand, key=lambda fn: os.lstat(os.path.join(STORAGE_DIR, fn)).st_ctime)[0]
         if not blob:
-            link = obj
-            if os.path.exists(os.path.join(LINK_DIR, link)):
-                blob = read_storage(os.path.join(LINK_DIR, link))
+            link_name = obj
+            link_hash = base64.urlsafe_b64encode(hashlib.sha1(link_name).digest())
+            if os.path.exists(os.path.join(LINK_DIR, link_hash)):
+                blob = read_storage(os.path.join(LINK_DIR, link_hash))
 
     if blob and os.path.exists(os.path.join(STORAGE_DIR, blob)):
         content = read_storage(os.path.join(STORAGE_DIR, blob))
@@ -77,17 +79,18 @@ def handler(req):
         new_blob = base64.urlsafe_b64encode(hashlib.sha1(new_content).digest())
         if new_blob != blob:
             write_storage(os.path.join(STORAGE_DIR, new_blob), new_content)
-            if link:
-                write_storage(os.path.join(LINK_DIR, link), new_blob)
+            if link_hash:
+                write_storage(os.path.join(LINK_DIR, link_hash), new_blob)
             if html:
-                mod_python.util.redirect(req, "/%s?link=%s" % (link or new_blob, var.getfirst('link')), new_blob)
+                mod_python.util.redirect(req, "/%s?link=%s" % (link_name or new_blob, var.getfirst('link')), new_blob)
             content = new_content
             blob = new_blob
-    new_link = var.getfirst('link')
-    if blob and new_link and new_link != link:
-        write_storage(os.path.join(LINK_DIR, new_link), blob)
+    new_link_name = var.getfirst('link')
+    if blob and new_link_name and new_link_name != link_name:
+        new_link_hash = base64.urlsafe_b64encode(hashlib.sha1(new_link_name).digest())
+        write_storage(os.path.join(LINK_DIR, new_link_hash), blob)
         if html:
-            mod_python.util.redirect(req, "/%s" % new_link, new_link)
+            mod_python.util.redirect(req, "/%s" % new_link_name, new_link_name)
     
     #output
     text = []
@@ -102,17 +105,17 @@ def handler(req):
 </head>
 <body onLoad="hide()">""" % req.headers_in['Host'],
         '<div id="container">',
-        '<form action="%s" method="GET" enctype="multipart/form-data">' % (link or '/'),
+        '<form action="%s" method="GET" enctype="multipart/form-data">' % (link_name or '/'),
         '<div id="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="show()">%s</textarea></div>' % (new_content or content),
         '<div id="control"><A href="/" title="start from scratch/">new</A>',
-        '<input type="text" placeholder="link name ..." name="link" oninput="show()" value="%s">' % (link or "")]
+        '<input type="text" placeholder="link name ..." name="link" oninput="show()" value="%s">' % (link_name or "")]
         if content:
-            if link:
-                text.append('<a href="/%s" title="mutable tag: %s/%s">symlink</A>' % (link, base_url, link))
-                text.append('<a href="/%s?raw" title="mutable tag: %s/%s?raw">(raw)</A>' % (link, base_url, link))
+            if link_name:
+                text.append('<a href="/%s" title="mutable tag: %s/%s">symlink</A>' % (link_name, base_url, link_name))
+                text.append('<a href="/%s?raw" title="mutable tag: %s/%s?raw">/raw</A>' % (link_name, base_url, link_name))
             if blob:
                 text.append('<a href="/%s" title="immutable hash: %s/%s">permalink</A>' % (blob, base_url, blob))
-                text.append('<a href="/%s?raw" title="immutable hash: %s/%s?raw">(raw)</A>' % (blob, base_url, blob))
+                text.append('<a href="/%s?raw" title="immutable hash: %s/%s?raw">/raw</A>' % (blob, base_url, blob))
                 text.append('<input type="hidden" name="prev" value="%s">' % blob)
         text.append('<input type="submit" id="submit" value="%s">' % \
             (content and 'update' or 'save'))
