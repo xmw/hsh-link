@@ -8,17 +8,35 @@ import base64, hashlib, mod_python.apache, os, qrencode, PIL.ImageOps
 
 hsh = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s).digest()).rstrip('=')
 
-def read_storage(fn):
+def subdirfn(repo, fn):
+    if len(fn) < 4:
+        raise ValueError
+    return os.path.join(repo, fn[0:2], fn[2:4]), fn
+
+def read_storage(repo, fn):
+    fn = os.path.join(*subdirfn(repo, fn))
     if os.path.exists(fn):
         f = file(fn, 'r')
         content = f.read()
         f.close()
         return content
 
-def write_storage(fn, data):
-    f = file(fn, 'w')
+def write_storage(repo, fn, data):
+    d, fn = subdirfn(repo, fn)
+    if not os.path.exists(d):
+        os.makedirs(d, mode=0770)
+    f = file(os.path.join(d, fn), 'w')
     f.write(data)
     f.close()
+
+def find_storage(repo, partfn):
+    d, partfn = subdirfn(repo, partfn) 
+    if not os.path.exists(d):
+        return None
+    cand = filter(lambda s: s.startswith(partfn), os.listdir(d))
+    if not cand:
+        return None
+    return sorted(cand, key=lambda fn: os.lstat(os.path.join(STORAGE_DIR, fn)).st_ctime)[0]
     
 def get_last_value(fieldstorage, name, default=None):
     cand = fieldstorage.getlist(name)
@@ -53,26 +71,19 @@ def handler(req):
     obj = os.path.normpath(req.uri)[1:]
     if obj == 'robots.txt' or obj.startswith('.artwork/'):
         return mod_python.apache.DECLINED
-    link_name = None
-    link_hash = None
-    blob = None
+    content, blob, link_name, link_hash = None, None, None, None
     if obj:
-        if os.path.exists(os.path.join(STORAGE_DIR, obj)):
+        content = read_storage(STORAGE_DIR, obj)
+        if content:
             blob = obj
         else:
-            cand = filter(lambda s: s.startswith(obj), os.listdir(STORAGE_DIR))
-            if cand:
-                blob = sorted(cand, key=lambda fn: os.lstat(os.path.join(STORAGE_DIR, fn)).st_ctime)[0]
-        if not blob:
             link_name = obj
             link_hash = hsh(link_name)
-            if os.path.exists(os.path.join(LINK_DIR, link_hash)):
-                blob = read_storage(os.path.join(LINK_DIR, link_hash))
+            blob = read_storage(LINK_DIR, link_hash)
+            if blob:
+                content = read_storage(STORAGE_DIR, blob)
 
-    if blob and os.path.exists(os.path.join(STORAGE_DIR, blob)):
-        content = read_storage(os.path.join(STORAGE_DIR, blob))
-    else:
-        content = ""
+    content = content or ""
 
     # append
     if not new_content:
@@ -87,7 +98,7 @@ def handler(req):
             return mod_python.apache.HTTP_REQUEST_ENTITY_TOO_LARGE
         new_blob = hsh(new_content)
         if new_blob != blob:
-            write_storage(os.path.join(STORAGE_DIR, new_blob), new_content)
+            write_storage(STORAGE_DIR, new_blob, new_content)
             content, blob = new_content, new_blob
     new_link_name = get_last_value(var, 'link')
     if new_link_name == link_name:
@@ -95,10 +106,10 @@ def handler(req):
     if new_link_name:
         new_link_hash = hsh(new_link_name)
         if blob:
-            write_storage(os.path.join(LINK_DIR, new_link_hash), blob)
+            write_storage(LINK_DIR, new_link_hash, blob)
         link_name, link_hash = new_link_name, new_link_hash
     if new_blob and link_hash:
-        write_storage(os.path.join(LINK_DIR, link_hash), new_blob)
+        write_storage(LINK_DIR, link_hash, new_blob)
     if output == 'html':
         if new_link_name:
             mod_python.util.redirect(req, "/%s" % new_link_name)
