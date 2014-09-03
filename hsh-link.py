@@ -116,8 +116,8 @@ def handler(req):
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<link rel="stylesheet" type="text/css" href="hsh-link.css">
-<script src="hsh-link.js"></script>
+<link rel="stylesheet" type="text/css" href="/.artwork/hsh-link.css">
+<script src="/.artwork/hsh-link.js"></script>
 <title>%s</title>
 </head>
 <body onLoad="body_loaded()">""" % req.headers_in['Host'],
