@@ -150,7 +150,7 @@ def handler(req):
         if new_link_name:
             mod_python.util.redirect(req, "/%s" % link_name, link_name)
             return mod_python.apache.OK
-        if link_name == None and new_data:
+        if not link_name and new_data:
             mod_python.util.redirect(req, "/%s" % data_hash, data_hash)
             return mod_python.apache.OK
 
