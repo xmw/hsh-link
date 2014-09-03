@@ -45,10 +45,7 @@ def handler(req):
     if req.method in ('DELETE', 'PUT'):
         req.write("future DELETE and PUT not yet implented.\n")
         return HTTP_BAD_REQUEST
-    elif req.method == 'GET':
-        new_content = get_last_value(var, 'content')
-        
-    elif req.method == 'POST':
+    elif req.method in ('GET', 'POST'):
         new_content = get_last_value(var, 'content')
 
     # lookup
