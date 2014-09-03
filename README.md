@@ -24,3 +24,5 @@ Commandline examples
     create new hash, containing current date, no link, return hash link
   curl -F content=`date` hsh.link/foo?output=qr
     create new hash, create or update symlink /foo and return qr code
+
+(c) 2014 Michael Weber http://xmw.de/
