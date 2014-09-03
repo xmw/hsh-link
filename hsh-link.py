@@ -95,10 +95,9 @@ def handler(req):
                     content = read_storage(STORAGE_DIR, blob)
 
     # append
-    if not new_content:
-        append_content = get_last_value(var, 'append')
-        if append_content:
-            new_content = content + append_content
+    append_content = get_last_value(var, 'append')
+    if append_content:
+        new_content = (content or "") + append_content
 
     # store
     new_blob = None
@@ -119,6 +118,7 @@ def handler(req):
         link_name, link_hash = new_link_name, new_link_hash
     if new_blob and link_hash:
         write_storage(LINK_DIR, link_hash, new_blob)
+
     if output == 'html':
         if new_link_name:
             mod_python.util.redirect(req, "/%s" % new_link_name)
@@ -196,11 +196,19 @@ def handler(req):
     elif output == 'raw':
         req.content_type = "text/plain; charset=utf-8"
         req.write(content)
-    else:
+    elif output == 'link':
         if not blob:
             return mod_python.apache.HTTP_NOT_FOUND
-        # either 'link' or unspecified w/o graphic browser
         req.content_type = "text/plain; charset=utf-8"
         text.append("%s/%s\n" % (base_url, blob))
+    elif output == 'default':
+        if not blob:
+            return mod_python.apache.HTTP_NOT_FOUND
+        if new_content or new_link_name:
+            req.content_type = "text/plain; charset=utf-8"
+            text.append("%s/%s\n" % (base_url, blob))
+        else:
+            req.content_type = "text/plain; charset=utf-8"
+            text.append(content)
     req.write("\n".join(text))
     return mod_python.apache.OK
