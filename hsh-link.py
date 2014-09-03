@@ -13,6 +13,9 @@ def subdirfn(repo, fn):
         return ['', '']
     return os.path.join(repo, fn[0:2], fn[2:4]), fn
 
+def is_storage(repo, fn):
+    return os.path.exists(os.path.join(*subdirfn(repo, fn)))
+
 def read_storage(repo, fn):
     fn = os.path.join(*subdirfn(repo, fn))
     if os.path.exists(fn):
@@ -20,6 +23,7 @@ def read_storage(repo, fn):
         content = f.read()
         f.close()
         return content
+    return None
 
 def write_storage(repo, fn, data):
     d, fn = subdirfn(repo, fn)
@@ -71,63 +75,83 @@ def handler(req):
         req.write("future DELETE and PUT not yet implented.\n")
         return mod_python.apache.HTTP_BAD_REQUEST
     elif req.method in ('GET', 'POST'):
-        new_content = get_last_value(var, 'content')
+        new_data = get_last_value(var, 'content')
+    else:
+        return mod_python.apache.HTTP_BAD_REQUEST
+    # append
+    append = get_last_value(var, 'append')
 
-    # lookup
+    new_link_name = get_last_value(var, 'link')
+
+    # data_hash, link_name or abrev. data_hash
+    data, data_hash, link_name, link_hash = None, None, None, None
     obj = os.path.normpath(req.uri)[1:]
     if obj == 'robots.txt' or obj.startswith('.artwork/'):
         return mod_python.apache.DECLINED
-    content, blob, link_name, link_hash = None, None, None, None
-    if obj:
-        content = read_storage(STORAGE_DIR, obj)
-        if content:
-            blob = obj
+    if is_storage(STORAGE_DIR, obj):
+        data_hash = obj
+    else:
+        t = hsh(obj)
+        if is_storage(LINK_DIR, t):
+            link_name, link_hash = obj, t
         else:
-            link_name = obj
-            link_hash = hsh(link_name)
-            blob = read_storage(LINK_DIR, link_hash)
-            if blob:
-                content = read_storage(STORAGE_DIR, blob)
+            t = find_storage(STORAGE_DIR, obj)
+            if t:
+                data_hash = t
             else:
-                link_name, link_hash = None, None
-                blob = find_storage(STORAGE_DIR, obj)
-                if blob:
-                    content = read_storage(STORAGE_DIR, blob)
+                new_link_name = obj
 
-    # append
-    append_content = get_last_value(var, 'append')
-    if append_content:
-        new_content = (content or "") + append_content
+    # don't just replay
+    if output == 'raw':
+        if not link_name:
+            return mod_python.apache.HTTP_BAD_REQUEST
 
-    # store
-    new_blob = None
-    if new_content:
-        if len(new_content) > FILE_SIZE_MAX:
+    # switch to new link_name
+    if new_link_name != None:
+        if new_link_name == link_name: # no update
+            new_link_name = None
+        else:
+            # deref old symlink, if new_link but no new_data
+            if link_hash == None and link_name != None:
+                link_hash = hsh(link_name)
+            if data_hash == None and link_hash != None:
+                data_hash = read_storage(LINK_DIR, link_hash)
+            link_name, link_hash = new_link_name, hsh(new_link_name)
+
+    # need old elements?
+    if link_hash == None and link_name != None:
+        link_hash = hsh(link_name)
+    if data_hash == None and link_hash != None:
+        data_hash = read_storage(LINK_DIR, link_hash)
+    if append or output in ('html', 'raw'):
+        if data == None and data_hash != None:
+            data = read_storage(STORAGE_DIR, data_hash)
+
+    # switch to new data
+    if new_data != None:
+        if append: # need old data
+            new_data = (data or "") + new_data
+        if len(new_data) > FILE_SIZE_MAX:
             return mod_python.apache.HTTP_REQUEST_ENTITY_TOO_LARGE
-        new_blob = hsh(new_content)
-        if new_blob != blob:
-            write_storage(STORAGE_DIR, new_blob, new_content)
-            content, blob = new_content, new_blob
-    new_link_name = get_last_value(var, 'link')
-    if new_link_name == link_name:
-        new_link_name = None
-    if new_link_name:
-        new_link_hash = hsh(new_link_name)
-        if blob:
-            write_storage(LINK_DIR, new_link_hash, blob)
-        link_name, link_hash = new_link_name, new_link_hash
-    if new_blob and link_hash:
-        write_storage(LINK_DIR, link_hash, new_blob)
+        new_data_hash = hsh(new_data)
+        if not is_storage(STORAGE_DIR, new_data_hash):
+            write_storage(STORAGE_DIR, new_data_hash, new_data)
+        data, data_hash  = new_data, new_data_hash
 
+    # update link?
+    if new_link_name != None or new_data != None:
+        if link_hash != None and data_hash != None:
+            write_storage(LINK_DIR, link_hash, data_hash)
+
+    # update browser url?
     if output == 'html':
         if new_link_name:
-            mod_python.util.redirect(req, "/%s" % new_link_name)
-        elif new_blob:
-            if link_name:
-                mod_python.util.redirect(req, "/%s" % link_name)
-            else:
-                mod_python.util.redirect(req, "/%s" % new_blob)
-    
+            mod_python.util.redirect(req, "/%s" % link_name, link_name)
+            return mod_python.apache.OK
+        if link_name == None and new_data:
+            mod_python.util.redirect(req, "/%s" % data_hash, data_hash)
+            return mod_python.apache.OK
+
     #output
     text = []
     if output == 'html':
@@ -143,28 +167,30 @@ def handler(req):
 <body onLoad="body_loaded()">""" % req.headers_in['Host'],
         '<div class="container">',
         '<form action="%s" method="POST" enctype="multipart/form-data">' % (link_name or '/'),
-        '<div class="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % (new_content or content or ""),
+        '<div class="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % data,
         '<div class="control"><A href="/" title="start from scratch/">clear</A>',
         '| symlink: <input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' % (link_name or "")]
-        if content:
-            if blob:
-                text.append('<a href="/%s" title="immutable hash: %s/%s">permalink</A>' % (blob, base_url, blob))
-                short = uniq_name(STORAGE_DIR, blob)
-                text.append('<a href="/%s" title="immutable hash: %s/%s">short</A>' % (short, base_url, short))
-                text.append('<input type="hidden" name="prev" value="%s">' % blob)
+        if data_hash:
+            short_hash, css_hide = uniq_name(STORAGE_DIR, data_hash), ''
+        else:
+            short_hash, css_hide = '', ' style="visibility: hidden;"'
+        text.append('<a href="/%s" title="immutable hash: %s/%s"%s>permalink</a>' % (data_hash, base_url, data_hash, css_hide))
+        text.append('<a href="/%s" title="immutable hash: %s/%s" %s>short</A>' % (short_hash, base_url, short_hash, css_hide))
+        if data_hash:
+            text.append('<input type="hidden" name="prev" value="%s">' % data_hash)
         text.append(' | output: <select name="output" id="output" onchange="output_selected()">')
         for output_ in OUTPUT:
             text.append('<option value="%s"%s>%s</option>' % (output_, output == output_ and ' selected' or '', output_))
         text.append('</select>')
-        text.append('<input type="submit" id="store" title="safe changed data" value="%s">' % \
-            (content and 'update' or 'save'))
+        text.append('<input type="submit" id="store" title="safe changed data" value="save">')
         text.append("""</div>
 </form>
 <div class="footer">(c) <a href="http://xmw.de/">xmw.de</a> 2014 <a href="https://github.com/xmw/hsh-link">sources</a>
 <a href="http://validator.w3.org/check?uri=referer">html5</a></div>
 </div>
 </body>
-</html>""")
+</html>
+""")
     elif output == 'qr':
         version, size, img = qrencode.encode(base_url + '/' + (link_name or blob or ''), hint=qrencode.QR_MODE_8, case_sensitive=True)
         img = PIL.ImageOps.expand(img, border=1, fill='white')
@@ -195,20 +221,22 @@ def handler(req):
                 req.write('\n')
     elif output == 'raw':
         req.content_type = "text/plain; charset=utf-8"
-        req.write(content)
+        req.write(data)
     elif output == 'link':
-        if not blob:
+        if not data_hash:
             return mod_python.apache.HTTP_NOT_FOUND
         req.content_type = "text/plain; charset=utf-8"
-        text.append("%s/%s\n" % (base_url, blob))
+        text.append("%s/%s\n" % (base_url, data_hash))
     elif output == 'default':
-        if not blob:
-            return mod_python.apache.HTTP_NOT_FOUND
-        if new_content or new_link_name:
+        if new_data or new_link_name:
             req.content_type = "text/plain; charset=utf-8"
-            text.append("%s/%s\n" % (base_url, blob))
+            text.append("%s/%s\n" % (base_url, data_hash))
         else:
+            if data == None and data_hash != None:
+                data = read_storage(STORAGE_DIR, data_hash)
+            if data == None:
+                return mod_python.apache.HTTP_NOT_FOUND
             req.content_type = "text/plain; charset=utf-8"
-            text.append(content)
+            text.append(data)
     req.write("\n".join(text))
     return mod_python.apache.OK
