@@ -1,4 +1,4 @@
-hsh-link
+hsh.link
 ========
 
 A minimalistic online clipboard
