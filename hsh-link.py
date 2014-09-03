@@ -105,7 +105,7 @@ def handler(req):
 
     # don't just replay
     if output == 'raw':
-        if not link_name:
+        if not data_hash and not link_name:
             return mod_python.apache.HTTP_BAD_REQUEST
 
     # switch to new link_name
