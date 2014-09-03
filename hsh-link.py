@@ -192,7 +192,8 @@ def handler(req):
 </html>
 """)
     elif output == 'qr':
-        version, size, img = qrencode.encode(base_url + '/' + (link_name or blob or ''), hint=qrencode.QR_MODE_8, case_sensitive=True)
+        d = base_url + '/' + (link_name or data_hash or '')
+        version, size, img = qrencode.encode(d, hint=qrencode.QR_MODE_8, case_sensitive=True)
         img = PIL.ImageOps.expand(img, border=1, fill='white')
         if agent == 'graphic':
             req.content_type = "image/png; charset=utf-8"
