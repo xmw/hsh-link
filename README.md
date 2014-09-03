@@ -26,11 +26,15 @@ To upload to hsh.link, use POST requests (GET parameters are ok):
 
 Create new hash, containing current date, no link, return hash link:
 
-    curl -F content="`date`" hsh.link/?output=link
+    curl -F content="`date`" hsh.link
+
+Alternatively, with a pipe:
+
+    date | curl -F content="<-" hsh.link
 
 Create new hash, create or update symlink /foo and return QR code:
 
-    curl -F content=`date` hsh.link/foo?output=qr
+    curl -F content="`date`" hsh.link/foo?output=qr
 
 
 
