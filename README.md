@@ -1,10 +1,10 @@
 hsh.link
 ========
 
-A minimalistic online clipboard
+A minimalistic online clipboard/pastebin.
 
 ## Features
-* Objects are stored as files named according the contents sha1 hash
+* Objects are stored as files named according the contents SHA1 hash.
   These objects are accessible via permanent links and immutable.
 * Updates result in new objects being created.
 * Human readable symlinks can be created to link to chain of objects.
@@ -13,13 +13,13 @@ A minimalistic online clipboard
 
 To upload to hsh.link, use POST requests (GET parameters are ok):
 
-* content=, append= new content to be stored at, appended to location <link>
+* content=, append= new content to be stored at, resp. appended to location link=
 * /uri-path first assumption for storage location
 * link= override storage location, create symlink to mentioned uri-path or content=
 * output= specify the output returned to the client:
-  * `html` HTML5 with edit capabilities, CSS3 and some javascript.
+  * `html` HTML5 with edit capabilities, CSS3 and some javascript
   * `raw` plain data as `Content-Type: text/plain`
-  * `link` the url to the (created) symlink or just created hash reference
+  * `link` the url just created hash
   * `qr` a QR code representing the "link" either as image/png or UTF-8 art
     
 ## Commandline examples
