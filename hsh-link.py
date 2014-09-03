@@ -6,6 +6,8 @@ OUTPUT = 'default', 'raw', 'html', 'link', 'qr'
 
 import base64, hashlib, mod_python.apache, os, qrencode, PIL.ImageOps
 
+hsh = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s).digest()).rstrip('=')
+
 def read_storage(fn):
     if os.path.exists(fn):
         f = file(fn, 'r')
@@ -63,7 +65,7 @@ def handler(req):
                 blob = sorted(cand, key=lambda fn: os.lstat(os.path.join(STORAGE_DIR, fn)).st_ctime)[0]
         if not blob:
             link_name = obj
-            link_hash = base64.urlsafe_b64encode(hashlib.sha1(link_name).digest())
+            link_hash = hsh(link_name)
             if os.path.exists(os.path.join(LINK_DIR, link_hash)):
                 blob = read_storage(os.path.join(LINK_DIR, link_hash))
 
@@ -83,7 +85,7 @@ def handler(req):
     if new_content:
         if len(new_content) > FILE_SIZE_MAX:
             return mod_python.apache.HTTP_REQUEST_ENTITY_TOO_LARGE
-        new_blob = base64.urlsafe_b64encode(hashlib.sha1(new_content).digest())
+        new_blob = hsh(new_content)
         if new_blob != blob:
             write_storage(os.path.join(STORAGE_DIR, new_blob), new_content)
             content, blob = new_content, new_blob
@@ -91,7 +93,7 @@ def handler(req):
     if new_link_name == link_name:
         new_link_name = None
     if new_link_name:
-        new_link_hash = base64.urlsafe_b64encode(hashlib.sha1(new_link_name).digest())
+        new_link_hash = hsh(new_link_name)
         if blob:
             write_storage(os.path.join(LINK_DIR, new_link_hash), blob)
         link_name, link_hash = new_link_name, new_link_hash
