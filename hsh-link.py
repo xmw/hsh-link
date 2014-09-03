@@ -137,7 +137,7 @@ def handler(req):
 <body onLoad="body_loaded()">""" % req.headers_in['Host'],
         '<div class="container">',
         '<form action="%s" method="POST" enctype="multipart/form-data">' % (link_name or '/'),
-        '<div class="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % (new_content or content),
+        '<div class="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % (new_content or content or ""),
         '<div class="control"><A href="/" title="start from scratch/">new</A>',
         '| symlink: <input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' % (link_name or "")]
         if content:
