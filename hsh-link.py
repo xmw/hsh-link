@@ -44,13 +44,13 @@ def handler(req):
         req.write("future DELETE and PUT not yet implented.\n")
         return HTTP_BAD_REQUEST
     elif req.method == 'GET':
-        new_content = var.getfirst('content')
+        new_content = get_last_value(var, 'content')
         
     elif req.method == 'POST':
         if req.args:
             req.write("Mixed POST and GET not supported.\n")
             return HTTP_BAD_REQUEST
-        new_content = var.getfirst('content')
+        new_content = get_last_value(var, 'content')
 
     # lookup
     obj = os.path.normpath(req.uri)[1:]
@@ -77,7 +77,7 @@ def handler(req):
 
     # append
     if not new_content:
-        append_content = var.getfirst('append')
+        append_content = get_last_value(var, 'append')
         if append_content:
             new_content = content + append_content
 
@@ -89,12 +89,13 @@ def handler(req):
         if new_blob != blob:
             write_storage(os.path.join(STORAGE_DIR, new_blob), new_content)
             content, blob = new_content, new_blob
-    link_ = var.getlist('link')
-    new_link_name = link_ and link_[-1].value
-    if new_link_name:
+    new_link_name = get_last_value(var, 'link')
+    if new_link_name and new_link_name != link_name:
         new_link_hash = base64.urlsafe_b64encode(hashlib.sha1(new_link_name).digest())
         write_storage(os.path.join(LINK_DIR, new_link_hash), blob)
         link_name, link_hash = new_link_name, new_link_hash
+    else:
+        new_link_name = None
     if html and (new_content or new_link_name):
         mod_python.util.redirect(req, "/%s" % new_link_name or link_name or new_blob)
     
