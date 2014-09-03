@@ -49,9 +49,6 @@ def handler(req):
         new_content = get_last_value(var, 'content')
         
     elif req.method == 'POST':
-        if req.args:
-            req.write("Mixed POST and GET not supported.\n")
-            return HTTP_BAD_REQUEST
         new_content = get_last_value(var, 'content')
 
     # lookup
@@ -130,7 +127,7 @@ def handler(req):
         '<form action="%s" method="POST" enctype="multipart/form-data">' % (link_name or '/'),
         '<div class="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % (new_content or content),
         '<div class="control"><A href="/" title="start from scratch/">new</A>',
-        'symlink:<input type="text" placeholder="enter name" name="link" oninput="data_modified()" value="%s">' % (link_name or "")]
+        'symlink:<input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' % (link_name or "")]
         if content:
             if blob:
                 text.append('<a href="/%s" title="immutable hash: %s/%s">permalink</A>' % (blob, base_url, blob))
@@ -150,7 +147,7 @@ def handler(req):
 </html>""")
     elif output == 'link':
         req.content_type = "text/plain; charset=utf-8"
-        text.append("%s/%s" % (base_url, obj))
+        text.append("%s/%s" % (base_url, link_name or blob))
     elif output == 'qr':
         version, size, img = qrencode.encode(base_url + '/' + (link_name or blob or ''), hint=qrencode.QR_MODE_8, case_sensitive=True)
         img = PIL.ImageOps.expand(img, border=1, fill='white')
