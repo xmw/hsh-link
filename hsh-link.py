@@ -156,14 +156,28 @@ def handler(req):
         img = PIL.ImageOps.expand(img, border=1, fill='white')
         if agent == 'graphic':
             req.content_type = "image/png; charset=utf-8"
-            img.resize((img.size[0] * 4, img.size[1] * 4), PIL.Image.NEAREST).save(req, 'PNG')
+            img.resize((img.size[0] * 8, img.size[1] * 8), PIL.Image.NEAREST).save(req, 'PNG')
         else:
             req.content_type = "text/plain; charset=utf-8"
             pixels = img.load()
             width, height = img.size
-            for row in range(height):
+            for row in range(height//2):
                 for col in range(width):
-                    req.write(pixels[col, row] and '██' or '  ')
+                    if pixels[col, row * 2] and pixels[col, row * 2 + 1]:
+                        req.write('█')
+                    elif pixels[col, row * 2]:
+                        req.write('▀')
+                    elif pixels[col, row * 2 + 1]:
+                        req.write('▄')
+                    else:
+                        req.write(' ')
+                req.write('\n')
+            if height % 2:
+                for col in range(width):
+                    if pixels[col, height-1]:
+                        req.write('▀')
+                    else:
+                         req.write(' ')
                 req.write('\n')
     elif output == 'raw':
         req.content_type = "text/plain; charset=utf-8"
