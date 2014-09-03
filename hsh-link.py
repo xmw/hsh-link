@@ -10,7 +10,7 @@ hsh = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s).digest()).rstrip('=')
 
 def subdirfn(repo, fn):
     if len(fn) < 4:
-        raise ValueError
+        return ['', '']
     return os.path.join(repo, fn[0:2], fn[2:4]), fn
 
 def read_storage(repo, fn):
@@ -30,13 +30,13 @@ def write_storage(repo, fn, data):
     f.close()
 
 def find_storage(repo, partfn):
-    d, partfn = subdirfn(repo, partfn) 
+    d, partfn = subdirfn(repo, partfn)
     if not os.path.exists(d):
         return None
     cand = filter(lambda s: s.startswith(partfn), os.listdir(d))
     if not cand:
         return None
-    return sorted(cand, key=lambda fn: os.lstat(os.path.join(STORAGE_DIR, fn)).st_ctime)[0]
+    return sorted(cand, key=lambda fn: os.lstat(os.path.join(d, fn)).st_ctime)[0]
     
 def get_last_value(fieldstorage, name, default=None):
     cand = fieldstorage.getlist(name)
@@ -82,8 +82,11 @@ def handler(req):
             blob = read_storage(LINK_DIR, link_hash)
             if blob:
                 content = read_storage(STORAGE_DIR, blob)
-
-    content = content or ""
+            else:
+                link_name, link_hash = None, None
+                blob = find_storage(STORAGE_DIR, obj)
+                if blob:
+                    content = read_storage(STORAGE_DIR, blob)
 
     # append
     if not new_content:
