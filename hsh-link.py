@@ -224,6 +224,7 @@ def handler(req):
                 img[(y*2)*s:(y*2+1)*s],img[(y*2+1)*s:(y*2+2)*s]))) + '█')
         out('')
     elif output == 'raw':
+        req.content_type = ''
         out(data)
     elif output == 'link':
         if not data_hash:
