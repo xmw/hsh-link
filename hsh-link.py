@@ -109,12 +109,7 @@ def handler(req):
                 data_hash = t
             else:
                 new_link_name = obj
-
-    # don't just replay
-    if output == 'raw':
-        if not data_hash and not link_name:
-            return mod_python.apache.HTTP_BAD_REQUEST
-
+ 
     # switch to new link_name
     if new_link_name != None:
         if new_link_name == link_name: # no update
