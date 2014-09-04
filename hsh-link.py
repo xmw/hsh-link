@@ -127,6 +127,14 @@ def handler(req):
                 data_hash = read_storage(LINK_DIR, link_hash)
             link_name, link_hash = new_link_name, hsh(new_link_name)
 
+    if output == 'default':
+        if agent == 'text':
+            if new_link_name and not data_hash:
+                return mod_python.apache.HTTP_BAD_REQUEST
+            output = 'raw'
+        else:
+            output = 'html'
+
     # need old elements?
     if link_hash == None and link_name != None:
         link_hash = hsh(link_name)
@@ -165,13 +173,6 @@ def handler(req):
     req.content_type = "text/plain; charset=utf-8"
     text = []
     out = text.append
-    if output == 'default':
-        if agent == 'text':
-            if new_link_name and not data_hash:
-                return mod_python.apache.HTTP_BAD_REQUEST
-            output = 'raw'
-        else:
-            output = 'html'
     if output == 'html':
         req.content_type = "text/html; charset=utf-8"
         out('<!DOCTYPE html>\n\n<html>\n<head>')
