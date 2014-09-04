@@ -230,7 +230,7 @@ def handler(req):
     elif output == 'shortlink':
         if not data_hash:
             return mod_python.apache.HTTP_NOT_FOUND
-        out("%s%s\n" % (BASE_URL, uniq_name(STORAGE_DIR, data_hash))
+        out("%s%s\n" % (BASE_URL, uniq_name(STORAGE_DIR, data_hash)))
     elif output == 'default':
         if new_data or new_link_name:
             out("%s%s\n" % (BASE_URL, data_hash))
