@@ -169,6 +169,7 @@ def handler(req):
         if agent == 'text':
             if new_link_name and not data_hash:
                 return mod_python.apache.HTTP_BAD_REQUEST
+            output = 'raw'
         else:
             output = 'html'
     if output == 'html':
