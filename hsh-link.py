@@ -2,7 +2,7 @@
 # copyright Michael Weber (michael at xmw dot de) 2014
 
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH
-OUTPUT = 'default', 'raw', 'html', 'link', 'qr', 'qr_png', 'qr_text', 'qr_text_big'
+OUTPUT = 'default', 'raw', 'html', 'link', 'shortlink', 'qr', 'qr_png', 'qr_text', 'qr_text_big'
 
 import base64, hashlib, mod_python.apache, os
 
@@ -227,6 +227,10 @@ def handler(req):
         if not data_hash:
             return mod_python.apache.HTTP_NOT_FOUND
         out("%s%s\n" % (BASE_URL, data_hash))
+    elif output == 'shortlink':
+        if not data_hash:
+            return mod_python.apache.HTTP_NOT_FOUND
+        out("%s%s\n" % (BASE_URL, uniq_name(STORAGE_DIR, data_hash))
     elif output == 'default':
         if new_data or new_link_name:
             out("%s%s\n" % (BASE_URL, data_hash))
