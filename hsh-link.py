@@ -119,13 +119,18 @@ def handler(req):
             if link_hash == None and link_name != None:
                 link_hash = hsh(link_name)
             if data_hash == None and link_hash != None:
-                data_hash = read_storage(LINK_DIR, link_hash)
+                wait = get_last_value(var, 'wait')
+                while data_hash == None:
+                    data_hash = read_storage(LINK_DIR, link_hash)
+                    if not wait:
+                        break
+                    time.sleep(1)
             link_name, link_hash = new_link_name, hsh(new_link_name)
 
     if output == 'default':
         if agent == 'text':
             if new_link_name and not data_hash:
-                return mod_python.apache.HTTP_BAD_REQUEST
+                return mod_python.apache.HTTP_NOT_FOUND
             output = 'raw'
         else:
             output = 'html'
@@ -228,6 +233,8 @@ def handler(req):
         out('')
     elif output == 'raw':
         req.content_type = ''
+        if not data:
+             return mod_python.apache.HTTP_NOT_FOUND
         out(data)
     elif output == 'link':
         if not data_hash:
