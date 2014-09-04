@@ -53,7 +53,9 @@ curl -G -d output=html $URL$sym | wc
 echo "output as link"
 curl -G -d output=link $URL$sym
 echo "output as qr utf-8 art"
-curl -G -d output=qr $URL$sym
+curl -G -d output=qr_text $URL$sym
+echo "output as qr utf-8 art big"
+curl -G -d output=qr_text_big $URL$sym
 echo "output as qr png"
 curl -A Mozilla -G -d output=qr $URL$sym | wc
 

@@ -3,9 +3,9 @@
 
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_HOST, BASE_PATH
 BASE_URL = BASE_PROTO + BASE_HOST + BASE_PATH
-OUTPUT = 'default', 'raw', 'html', 'link', 'qr'
+OUTPUT = 'default', 'raw', 'html', 'link', 'qr', 'qr_png', 'qr_text', 'qr_text_big'
 
-import base64, hashlib, mod_python.apache, os, qrencode, PIL.ImageOps
+import base64, hashlib, mod_python.apache, os
 
 hsh = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s).digest()).rstrip('=')
 
@@ -56,6 +56,7 @@ def get_last_value(fieldstorage, name, default=None):
     return default
        
 def handler(req):
+    req.content_type = "text/plain; charset=utf-8"
     var = mod_python.util.FieldStorage(req, keep_blank_values=True)
 
     #guess output format
@@ -69,6 +70,11 @@ def handler(req):
     output = get_last_value(var, 'output', output)
     if not output in OUTPUT:
         return mod_python.apache.HTTP_BAD_REQUEST
+    if output == 'qr':
+        if agent == 'graphic':
+            output = 'qr_png'
+        else:
+            output = 'qr_text'
 
     # new_content
     if req.method in ('DELETE', 'PUT'):
@@ -147,15 +153,16 @@ def handler(req):
 
     # update browser url?
     if output == 'html':
-        if new_link_name:
-            mod_python.util.redirect(req, "/%s" % link_name, link_name)
+        if new_link_name and data_hash:
+            mod_python.util.redirect(req, "%s%s" % (BASE_PATH, link_name), link_name)
             return mod_python.apache.OK
         if not link_name and new_data:
-            mod_python.util.redirect(req, "/%s" % data_hash, data_hash)
+            mod_python.util.redirect(req, "%s%s" % (BASE_PATH, data_hash), data_hash)
             return mod_python.apache.OK
 
     #output
     text = []
+    out = text.append
     if output == 'html':
         req.content_type = "text/html; charset=utf-8"
         text += ["""<!DOCTYPE html>
@@ -177,70 +184,60 @@ def handler(req):
             short_hash, css_hide = uniq_name(STORAGE_DIR, data_hash), ''
         else:
             short_hash, css_hide = '', ' style="visibility: hidden;"'
-        text.append('<a href="%s%s" title="immutable hash: %s%s"%s>permalink</a>' % (BASE_PATH, data_hash, BASE_URL, data_hash, css_hide))
-        text.append('<a href="%s%s" title="immutable hash: %s%s"%s>short</a>' % (BASE_PATH, short_hash, BASE_URL, short_hash, css_hide))
+        out('<a href="%s%s" title="immutable hash: %s%s"%s>permalink</a>' % (BASE_PATH, data_hash, BASE_URL, data_hash, css_hide))
+        out('<a href="%s%s" title="immutable hash: %s%s"%s>short</a>' % (BASE_PATH, short_hash, BASE_URL, short_hash, css_hide))
         if data_hash:
-            text.append('<input type="hidden" name="prev" value="%s">' % data_hash)
-        text.append(' | output: <select name="output" id="output" onchange="output_selected()">')
+            out('<input type="hidden" name="prev" value="%s">' % data_hash)
+        out(' | output: <select name="output" id="output" onchange="output_selected()">')
         for output_ in OUTPUT:
-            text.append('<option value="%s"%s>%s</option>' % (output_, output == output_ and ' selected' or '', output_))
-        text.append('</select>')
-        text.append('<input type="submit" id="store" title="safe changed data" value="save">')
-        text.append("""</div>
-</form>
-<div class="footer">(c) <a href="http://xmw.de/">xmw.de</a> 2014 <a href="https://github.com/xmw/hsh-link">sources</a>
-<a href="http://validator.w3.org/check?uri=referer">html5</a></div>
-</div>
-</body>
-</html>
-""")
-    elif output == 'qr':
-        d = BASE_URL + (link_name or data_hash or '')
-        version, size, img = qrencode.encode(d, hint=qrencode.QR_MODE_8, case_sensitive=True)
+            out('<option value="%s"%s>%s</option>' % (output_, output == output_ and ' selected' or '', output_))
+        out('</select>')
+        out('</select><input type="submit" id="store"'
+                    ' title="safe changed data" value="save"></div></form>')
+        out('<div class="footer">(c) <a href="http://xmw.de/">xmw.de</a> 2014 '
+            '<a href="https://github.com/xmw/hsh-link">sources</a> '
+            '<a href="http://validator.w3.org/check?uri=referer">html5</a> '
+            '</div>\n</div>\n</body>\n</html>\n')
+    elif output == 'qr_png':
+        import qrencode, PIL.ImageOps
+        ver, s, img = qrencode.encode(BASE_URL + (link_name or data_hash or ''), 
+            level=qrencode.QR_ECLEVEL_L, hint=qrencode.QR_MODE_8, case_sensitive=True)
         img = PIL.ImageOps.expand(img, border=1, fill='white')
-        if agent == 'graphic':
-            req.content_type = "image/png; charset=utf-8"
-            img.resize((img.size[0] * 8, img.size[1] * 8), PIL.Image.NEAREST).save(req, 'PNG')
-        else:
-            req.content_type = "text/plain; charset=utf-8"
-            pixels = img.load()
-            width, height = img.size
-            for row in range(height//2):
-                for col in range(width):
-                    if pixels[col, row * 2] and pixels[col, row * 2 + 1]:
-                        req.write('█')
-                    elif pixels[col, row * 2]:
-                        req.write('▀')
-                    elif pixels[col, row * 2 + 1]:
-                        req.write('▄')
-                    else:
-                        req.write(' ')
-                req.write('\n')
-            if height % 2:
-                for col in range(width):
-                    if pixels[col, height-1]:
-                        req.write('▀')
-                    else:
-                         req.write(' ')
-                req.write('\n')
+        img = img.resize((s * 8, s * 8), PIL.Image.NEAREST)
+        req.content_type = "image/png; charset=utf-8"
+        img.save(req, 'PNG')
+    elif output == 'qr_text_big':
+        import qr_encode
+        v, s, img = qr_encode.encode(BASE_URL + (link_name or data_hash or ''), 0, 0, 2, True)
+        sym = lambda p: ('  ', '██')[ord(p)/255]
+        out('██' * (s + 2))
+        for y in range(s):
+            out('██' + ''.join(map(sym, img[y*s:(y+1)*s])) + '██')
+        out('██' * (s + 2))
+        out('')
+    elif output == 'qr_text':
+        import qr_encode
+        v, s, img = qr_encode.encode(BASE_URL + (link_name or data_hash or ''), 0, 0, 2, True)
+        sym = lambda (u, l): ((' ', '▄') , ('▀', '█'))[ord(u)/255][ord(l)/255]
+        img = '\xff'*s + img + '\xff'*s + '\xff'*s
+        for y in range((s + 1) / 2 + 1):
+            out('█' + ''.join(map(sym, zip(
+                img[(y*2)*s:(y*2+1)*s],img[(y*2+1)*s:(y*2+2)*s]))) + '█')
+        out('')
     elif output == 'raw':
-        req.content_type = "text/plain; charset=utf-8"
-        req.write(data)
+        text.append(data)
     elif output == 'link':
         if not data_hash:
             return mod_python.apache.HTTP_NOT_FOUND
-        req.content_type = "text/plain; charset=utf-8"
         text.append("%s%s\n" % (BASE_URL, data_hash))
     elif output == 'default':
         if new_data or new_link_name:
-            req.content_type = "text/plain; charset=utf-8"
             text.append("%s%s\n" % (BASE_URL, data_hash))
         else:
             if data == None and data_hash != None:
                 data = read_storage(STORAGE_DIR, data_hash)
             if data == None:
                 return mod_python.apache.HTTP_NOT_FOUND
-            req.content_type = "text/plain; charset=utf-8"
             text.append(data)
     req.write("\n".join(text))
     return mod_python.apache.OK
