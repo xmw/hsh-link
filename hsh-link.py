@@ -2,7 +2,7 @@
 # copyright Michael Weber (michael at xmw dot de) 2014
 
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH
-OUTPUT = 'default', 'raw', 'html', 'link', 'shortlink', 'qr', 'qr_png', 'qr_text', 'qr_text_big'
+OUTPUT = 'default', 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
 
 import base64, hashlib, mod_python.apache, os
 
@@ -205,16 +205,16 @@ def handler(req):
         img = img.resize((s * 8, s * 8), PIL.Image.NEAREST)
         req.content_type = "image/png; charset=utf-8"
         img.save(req, 'PNG')
-    elif output == 'qr_text_big':
+    elif output == 'qr_ascii':
         import qr_encode
         v, s, img = qr_encode.encode(BASE_URL + (link_name or data_hash or ''), 0, 0, 2, True)
-        sym = lambda p: ('  ', '██')[ord(p)/255]
-        out('██' * (s + 2))
+        sym = lambda p: ('  ', '@@')[ord(p)/255]
+        out('@@' * (s + 2))
         for y in range(s):
-            out('██' + ''.join(map(sym, img[y*s:(y+1)*s])) + '██')
-        out('██' * (s + 2))
+            out('@@' + ''.join(map(sym, img[y*s:(y+1)*s])) + '@@')
+        out('@@' * (s + 2))
         out('')
-    elif output == 'qr_text':
+    elif output == 'qr_utf8':
         import qr_encode
         v, s, img = qr_encode.encode(BASE_URL + (link_name or data_hash or ''), 0, 0, 2, True)
         sym = lambda (u, l): ((' ', '▄') , ('▀', '█'))[ord(u)/255][ord(l)/255]
@@ -229,7 +229,7 @@ def handler(req):
         if not data_hash:
             return mod_python.apache.HTTP_NOT_FOUND
         out("%s%s\n" % (BASE_URL, data_hash))
-    elif output == 'shortlink':
+    elif output == 'short':
         if not data_hash:
             return mod_python.apache.HTTP_NOT_FOUND
         out("%s%s\n" % (BASE_URL, uniq_name(STORAGE_DIR, data_hash)))
