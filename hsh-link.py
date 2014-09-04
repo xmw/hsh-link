@@ -76,9 +76,11 @@ def handler(req):
             output = 'qr_text'
 
     # new_content
-    if req.method in ('DELETE', 'PUT'):
-        req.write("future DELETE and PUT not yet implented.\n")
+    if req.method == 'DELETE':
+        req.write("DELETE not yet implented.\n")
         return mod_python.apache.HTTP_BAD_REQUEST
+    elif req.method == 'PUT':
+        new_data = req.read()
     elif req.method in ('GET', 'POST'):
         new_data = get_last_value(var, 'content')
     else:
