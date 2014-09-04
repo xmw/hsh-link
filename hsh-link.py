@@ -55,7 +55,6 @@ def get_last_value(fieldstorage, name, default=None):
     return default
        
 def handler(req):
-    req.content_type = "text/plain; charset=utf-8"
     var = mod_python.util.FieldStorage(req, keep_blank_values=True)
     BASE_URL = BASE_PROTO + req.headers_in['Host'] + BASE_PATH
 
@@ -161,25 +160,23 @@ def handler(req):
             return mod_python.apache.OK
 
     #output
+    req.content_type = "text/plain; charset=utf-8"
     text = []
     out = text.append
     if output == 'html':
         req.content_type = "text/html; charset=utf-8"
-        text += ["""<!DOCTYPE html>
-<html>
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<link rel="stylesheet" type="text/css" href="%s.artwork/hsh-link.css">
-<script src="%s.artwork/hsh-link.js"></script>
-<title>%s</title>
-</head>
-<body onLoad="body_loaded()">""" % (BASE_PATH, BASE_PATH, BASE_URL),
-        '<div class="container">',
-        '<form action="%s" method="POST" enctype="multipart/form-data">' % (link_name or BASE_PATH),
-        '<div class="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % (data or ""),
-        '<div class="control"><a href="%s" title="start from scratch/">clear</a> | ' % BASE_PATH,
-        '%s: <input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' %
-            (link_name and ('<a href="%s%s" title="variable named link">symlink</a>' % (BASE_PATH, link_name)) or "symlink", link_name or "")]
+        out('<!DOCTYPE html>\n\n<html>\n<head>')
+        out('<meta http-equiv="Content-Type" content="text/html; charset=utf-8">')
+        out('<link rel="stylesheet" type="text/css" href="%s.artwork/hsh-link.css">' % BASE_URL)
+        out('<script src="%s.artwork/hsh-link.js"></script>' % BASE_URL)
+        out('<title>%s</title>\n</head>' % BASE_URL)
+        out('<body onLoad="body_loaded()">\n<div class="container">')
+        out('<form action="%s" method="POST" enctype="multipart/form-data">' % \
+            (link_name or BASE_PATH))
+        out('<div class="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % (data or ""))
+        out('<div class="control"><a href="%s" title="start from scratch/">clear</a> | ' % BASE_PATH)
+        out('%s: <input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' %
+            (link_name and ('<a href="%s%s" title="variable named link">symlink</a>' % (BASE_PATH, link_name)) or "symlink", link_name or ""))
         if data_hash:
             short_hash, css_hide = uniq_name(STORAGE_DIR, data_hash), ''
         else:
@@ -191,7 +188,6 @@ def handler(req):
         out(' | output: <select name="output" id="output" onchange="output_selected()">')
         for output_ in OUTPUT:
             out('<option value="%s"%s>%s</option>' % (output_, output == output_ and ' selected' or '', output_))
-        out('</select>')
         out('</select><input type="submit" id="store"'
                     ' title="safe changed data" value="save"></div></form>')
         out('<div class="footer">(c) <a href="http://xmw.de/">xmw.de</a> 2014 '
@@ -225,19 +221,19 @@ def handler(req):
                 img[(y*2)*s:(y*2+1)*s],img[(y*2+1)*s:(y*2+2)*s]))) + '█')
         out('')
     elif output == 'raw':
-        text.append(data)
+        out(data)
     elif output == 'link':
         if not data_hash:
             return mod_python.apache.HTTP_NOT_FOUND
-        text.append("%s%s\n" % (BASE_URL, data_hash))
+        out("%s%s\n" % (BASE_URL, data_hash))
     elif output == 'default':
         if new_data or new_link_name:
-            text.append("%s%s\n" % (BASE_URL, data_hash))
+            out("%s%s\n" % (BASE_URL, data_hash))
         else:
             if data == None and data_hash != None:
                 data = read_storage(STORAGE_DIR, data_hash)
             if data == None:
                 return mod_python.apache.HTTP_NOT_FOUND
-            text.append(data)
+            out(data)
     req.write("\n".join(text))
     return mod_python.apache.OK
