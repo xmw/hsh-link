@@ -4,7 +4,7 @@
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH
 OUTPUT = 'default', 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
 
-import base64, hashlib, mod_python.apache, os
+import base64, hashlib, mod_python.apache, os, time
 
 hsh = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s).digest()).rstrip('=')
 
@@ -119,13 +119,14 @@ def handler(req):
             if link_hash == None and link_name != None:
                 link_hash = hsh(link_name)
             if data_hash == None and link_hash != None:
-                wait = get_last_value(var, 'wait')
-                while data_hash == None:
-                    data_hash = read_storage(LINK_DIR, link_hash)
-                    if not wait:
-                        break
-                    time.sleep(1)
+                data_hash = read_storage(LINK_DIR, link_hash)
             link_name, link_hash = new_link_name, hsh(new_link_name)
+
+    # data not ready
+    if get_last_value(var, 'wait') != None and new_link_name:
+        while data_hash == None:
+            time.sleep(1)
+            data_hash = read_storage(LINK_DIR, link_hash)
 
     if output == 'default':
         if agent == 'text':
