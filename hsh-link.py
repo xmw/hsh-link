@@ -165,6 +165,12 @@ def handler(req):
     req.content_type = "text/plain; charset=utf-8"
     text = []
     out = text.append
+    if output == 'default':
+        if agent == 'text':
+            if new_link_name and not data_hash:
+                return mod_python.apache.HTTP_BAD_REQUEST
+        else:
+            output = 'html'
     if output == 'html':
         req.content_type = "text/html; charset=utf-8"
         out('<!DOCTYPE html>\n\n<html>\n<head>')
@@ -234,14 +240,5 @@ def handler(req):
         if not data_hash:
             return mod_python.apache.HTTP_NOT_FOUND
         out("%s%s\n" % (BASE_URL, uniq_name(STORAGE_DIR, data_hash)))
-    elif output == 'default':
-        if new_data or new_link_name:
-            out("%s%s\n" % (BASE_URL, data_hash))
-        else:
-            if data == None and data_hash != None:
-                data = read_storage(STORAGE_DIR, data_hash)
-            if data == None:
-                return mod_python.apache.HTTP_NOT_FOUND
-            out(data)
     req.write("\n".join(text))
     return mod_python.apache.OK
