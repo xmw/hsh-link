@@ -1,8 +1,7 @@
 # vim: tabstop=4 fileencoding=utf-8
 # copyright Michael Weber (michael at xmw dot de) 2014
 
-from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_HOST, BASE_PATH
-BASE_URL = BASE_PROTO + BASE_HOST + BASE_PATH
+from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH
 OUTPUT = 'default', 'raw', 'html', 'link', 'qr', 'qr_png', 'qr_text', 'qr_text_big'
 
 import base64, hashlib, mod_python.apache, os
@@ -58,6 +57,7 @@ def get_last_value(fieldstorage, name, default=None):
 def handler(req):
     req.content_type = "text/plain; charset=utf-8"
     var = mod_python.util.FieldStorage(req, keep_blank_values=True)
+    BASE_URL = BASE_PROTO + req.headers_in['Host'] + BASE_PATH
 
     #guess output format
     output = 'default'
