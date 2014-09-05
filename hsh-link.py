@@ -122,9 +122,11 @@ def handler(req):
                 data_hash = read_storage(LINK_DIR, link_hash)
             link_name, link_hash = new_link_name, hsh(new_link_name)
 
-    # data not ready
-    if get_last_value(var, 'wait') != None and new_link_name:
-        while data_hash == None:
+    # wait for data or update of link
+    if get_last_value(var, 'wait') != None:
+        data_hash = read_storage(LINK_DIR, link_hash)
+        ref = data_hash
+        while ref == data_hash:
             time.sleep(1)
             data_hash = read_storage(LINK_DIR, link_hash)
 
