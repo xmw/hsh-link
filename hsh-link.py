@@ -132,9 +132,12 @@ def handler(req):
 
     if output == 'default':
         if agent == 'text':
-            if new_link_name and not data_hash:
+            if new_link_name and not data_hash and not new_data:
                 return mod_python.apache.HTTP_NOT_FOUND
-            output = 'raw'
+            if new_link_name or new_data:
+                output = 'link'
+            else:
+                output = 'raw'
         else:
             output = 'html'
 
