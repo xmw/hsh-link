@@ -183,8 +183,8 @@ def handler(req):
         req.content_type = "text/html; charset=utf-8"
         out('<!DOCTYPE html>\n\n<html>\n<head>')
         out('<meta http-equiv="Content-Type" content="text/html; charset=utf-8">')
-        out('<link rel="stylesheet" type="text/css" href="%s.artwork/hsh-link.css">' % BASE_URL)
-        out('<script src="%s.artwork/hsh-link.js"></script>' % BASE_URL)
+        out('<link rel="stylesheet" type="text/css" href="%s.artwork/hsh-link.css">' % BASE_PATH)
+        out('<script src="%s.artwork/hsh-link.js"></script>' % BASE_PATH)
         out('<title>%s</title>\n</head>' % BASE_URL)
         out('<body onLoad="body_loaded()">\n<div class="container">')
         out('<form action="%s" method="POST" enctype="multipart/form-data">' % \
