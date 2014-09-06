@@ -189,7 +189,6 @@ def handler(req):
         out('<body onLoad="body_loaded()">\n<div class="container">')
         out('<form action="%s" method="POST" enctype="multipart/form-data">' % \
             (link_name or BASE_PATH))
-        out('<div class="text"><textarea placeholder="Start typing ..." cols="81" rows="24" name="content" oninput="data_modified()">%s</textarea></div>' % (data or ""))
         out('<div class="control"><a href="%s" title="start from scratch/">clear</a> | ' % BASE_PATH)
         out('%s: <input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' %
             (link_name and ('<a href="%s%s" title="variable named link">symlink</a>' % (BASE_PATH, link_name)) or "symlink", link_name or ""))
@@ -205,12 +204,14 @@ def handler(req):
         for output_ in OUTPUT:
             out('<option value="%s"%s>%s</option>' % (output_, output == output_ and ' selected' or '', output_))
         out('</select><input type="submit" id="store"'
-                    ' title="safe changed data" value="save"></div></form>')
+                    ' title="safe changed data" value="save"></div>')
+        out('<div class="text"><textarea placeholder="Start typing ..." name="content" oninput="data_modified()">%s</textarea></div>' % (data or ""))
+        out('</form>')
         out('<div class="footer">(c) <a href="http://xmw.de/">xmw.de</a> 2014 '
             '<a href="https://github.com/xmw/hsh-link">sources</a> '
             '<a href="http://validator.w3.org/check?uri=referer">html5</a> '
-            '<a href="http://jigsaw.w3.org/css-validator/check/referer">css3</a> '
-            '</div>\n</div>\n</body>\n</html>\n')
+            '<a href="http://jigsaw.w3.org/css-validator/check/referer">css3</a> ')
+        out('</div></div>\n</body>\n</html>\n')
     elif output == 'qr_png':
         import qrencode, PIL.ImageOps
         ver, s, img = qrencode.encode(BASE_URL + (link_name or data_hash or ''), 
