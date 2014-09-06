@@ -136,7 +136,7 @@ def handler(req):
         if data != None:
             m = re.compile('^(?:http|https|ftp)://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$')
             if m.match(data):
-                mod_python.util.redirect(req, data.rstrip('\n'))
+                mod_python.util.redirect(req, data.rstrip(), permanent=True, text=data)
             m = magic.Magic(magic.MAGIC_MIME)
             if m.from_buffer(data).startswith('image/'):
                 output = 'raw'
