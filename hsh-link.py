@@ -4,7 +4,7 @@
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH
 OUTPUT = 'default', 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
 
-import base64, hashlib, mod_python.apache, os, time
+import base64, hashlib, mod_python.apache, os, re, time
 
 hsh = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s).digest()).rstrip('=')
 
@@ -62,7 +62,6 @@ def handler(req):
     output = 'default'
     agent = req.headers_in.get('User-Agent', '').lower()
     if agent.count('mozilla') or agent.count('opera') or agent.count('validator'):
-        output = 'html'
         agent = 'graphic'
     else:
         agent = 'text'
@@ -129,6 +128,16 @@ def handler(req):
         while ref == data_hash:
             time.sleep(1)
             data_hash = read_storage(LINK_DIR, link_hash)
+
+    # url shortener
+    if output == 'default' and link_name == None:
+        if data_hash != None and data == None:
+            data = read_storage(STORAGE_DIR, data_hash)
+        m = re.compile('^(?:http|https|ftp)://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$')
+        if data != None and m.match(data):
+            mod_python.util.redirect(req, data, data)
+        else:
+            req.write('meep')
 
     if output == 'default':
         if agent == 'text':
