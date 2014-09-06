@@ -167,6 +167,8 @@ def handler(req):
             new_data = (data or "") + new_data
         if len(new_data) > FILE_SIZE_MAX:
             return mod_python.apache.HTTP_REQUEST_ENTITY_TOO_LARGE
+        if get_last_value(var, 'linefeed') == 'unix':
+            new_data = new_data.replace('\r\n', '\n')
         new_data_hash = hsh(new_data)
         if not is_storage(STORAGE_DIR, new_data_hash):
             write_storage(STORAGE_DIR, new_data_hash, new_data)
@@ -211,7 +213,10 @@ def handler(req):
         out('<a href="%s%s" title="immutable hash: %s%s"%s>short</a>' % (BASE_PATH, short_hash, BASE_URL, short_hash, css_hide))
         if data_hash:
             out('<input type="hidden" name="prev" value="%s">' % data_hash)
-        out(' | output: <select name="output" id="output" onchange="output_selected()">')
+        out(' linefeed=<select name="linefeed" id="linefeed" onchange="data_modified()">')
+        lf = (data and data.count('\r\n')) and ('', ' selected') or (' selected', '')
+        out('<option value="unix"%s>unix</option><option value="dos"%s>dos</option></select>' % lf)
+        out(' output=<select name="output" id="output" onchange="output_selected()">')
         for output_ in OUTPUT:
             out('<option value="%s"%s>%s</option>' % (output_, output == output_ and ' selected' or '', output_))
         out('</select><input type="submit" id="store"'
