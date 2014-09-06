@@ -136,7 +136,7 @@ def handler(req):
         if data != None:
             m = re.compile('^(?:http|https|ftp)://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$')
             if m.match(data):
-                mod_python.util.redirect(req, data, data)
+                mod_python.util.redirect(req, data.rstrip('\n'))
             m = magic.Magic(magic.MAGIC_MIME)
             if m.from_buffer(data).startswith('image/'):
                 output = 'raw'
@@ -182,10 +182,10 @@ def handler(req):
     # update browser url?
     if output == 'html':
         if new_link_name and data_hash:
-            mod_python.util.redirect(req, "%s%s" % (BASE_PATH, link_name), link_name)
+            mod_python.util.redirect(req, "%s%s" % (BASE_PATH, link_name))
             return mod_python.apache.OK
         if not link_name and new_data:
-            mod_python.util.redirect(req, "%s%s" % (BASE_PATH, data_hash), data_hash)
+            mod_python.util.redirect(req, "%s%s" % (BASE_PATH, data_hash))
             return mod_python.apache.OK
 
     #output
