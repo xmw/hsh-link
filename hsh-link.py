@@ -133,7 +133,7 @@ def handler(req):
     if output == 'default' and link_name == None:
         if data_hash != None and data == None:
             data = read_storage(STORAGE_DIR, data_hash)
-        if data != None:
+        if data != None and not req.headers_in.get('referer', '').startswith(BASE_URL):
             m = re.compile('^(?:http|https|ftp)://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$')
             if m.match(data):
                 mod_python.util.redirect(req, data.rstrip(), permanent=True, text=data)
