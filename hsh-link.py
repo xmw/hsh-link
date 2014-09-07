@@ -1,10 +1,10 @@
 # vim: tabstop=4 fileencoding=utf-8
 # copyright Michael Weber (michael at xmw dot de) 2014
 
-from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH
+from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH, COOKIE_SECRET
 OUTPUT = 'default', 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
 
-import base64, hashlib, magic, mod_python.apache, os, re, time
+import base64, hashlib, magic, mod_python.apache, mod_python.Cookie, os, re, time
 
 hsh = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s).digest()).rstrip('=')
 
@@ -193,13 +193,26 @@ def handler(req):
     text = []
     out = text.append
     if output == 'html':
+        # handle theme
+        cookie = mod_python.Cookie.get_cookie(req, 'theme', mod_python.Cookie.MarshalCookie, secret=COOKIE_SECRET)
+        if type(cookie) is mod_python.Cookie.MarshalCookie:
+            theme = cookie.value
+        else:
+            theme = 'xmw'
+        theme = get_last_value(var, 'theme', theme)
+        if not theme in ('xmw', 'white'):
+            theme = 'xmw'
+        cookie = mod_python.Cookie.MarshalCookie('theme', theme, secret=COOKIE_SECRET)
+        cookie.expires = time.time() + 86400
+        mod_python.Cookie.add_cookie(req, cookie)
+
         req.content_type = "text/html; charset=utf-8"
         out('<!DOCTYPE html>\n\n<html>\n<head>')
         out('<meta http-equiv="Content-Type" content="text/html; charset=utf-8">')
-        out('<link rel="stylesheet" type="text/css" href="%s.artwork/hsh-link.css">' % BASE_PATH)
+        out('<link rel="stylesheet" type="text/css" href="%s.artwork/hsh-link-%s.css">' % (BASE_PATH, theme))
         out('<script src="%s.artwork/hsh-link.js"></script>' % BASE_PATH)
         out('<title>%s</title>\n</head>' % BASE_URL)
-        out('<body onLoad="body_loaded()">\n<div class="container">')
+        out('<body onLoad="body_loaded()"><div class="container">')
         out('<form action="%s" method="POST" enctype="multipart/form-data">' % \
             (link_name or BASE_PATH))
         out('<div class="control"><a href="%s" title="start from scratch/">clear</a> | ' % BASE_PATH)
@@ -226,7 +239,9 @@ def handler(req):
         out('<div class="footer">(c) <a href="http://xmw.de/">xmw.de</a> 2014 '
             '<a href="https://github.com/xmw/hsh-link">sources</a> '
             '<a href="http://validator.w3.org/check?uri=referer">html5</a> '
-            '<a href="http://jigsaw.w3.org/css-validator/check/referer">css3</a> ')
+            '<a href="http://jigsaw.w3.org/css-validator/check/referer">css3</a> '
+            'theme=<a href="?theme=xmw">xmw</a> '
+            '<a href="?theme=white">white</a> ')
         out('</div></div>\n</body>\n</html>\n')
     elif output == 'qr_png':
         import qrencode, PIL.ImageOps

@@ -1,0 +1,19 @@
+/*
+	vim: tabstop=4
+*/
+@font-face { font-family:dina; src:url(/.artwork/dina10px.ttf); }
+@font-face { font-family:dinabf; src:url(/.artwork/dina10pxbold.ttf); }
+
+textarea,input,select { border-style: None; background: transparent; }
+.text { height: 90vh; }
+textarea { height:100%; width:100%; }
+
+@media screen {
+	body { font-family:dina; }
+	a { text-decoration:none; }
+	a:link,a:visited,a:active,a:hover { color:black; }
+}
+
+@media print {
+	.control,.footer{ display: none; }
+}
