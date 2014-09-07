@@ -137,8 +137,8 @@ def handler(req):
             m = re.compile('^(?:http|https|ftp)://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$')
             if m.match(data):
                 mod_python.util.redirect(req, data.rstrip(), permanent=True, text=data)
-            m = magic.Magic(magic.MAGIC_MIME)
-            if m.from_buffer(data).startswith('image/'):
+            m = magic.Magic(magic.MAGIC_MIME).from_buffer(data)
+            if m.startswith('image/') or m == 'application/pdf':
                 output = 'raw'
 
     if output == 'default':
