@@ -224,7 +224,7 @@ def handler(req):
             short_hash, css_hide = uniq_name(STORAGE_DIR, data_hash), ''
         else:
             short_hash, css_hide = '', ' style="visibility: hidden;"'
-        out('<a href="%s%s" title="immutable hash: %s%s"%s>permalink</a>' % (BASE_PATH, data_hash, BASE_URL, data_hash, css_hide))
+        out('<a href="%s%s" title="immutable hash: %s%s"%s>permalink</a>' % (BASE_PATH, data_hash or "", BASE_URL, data_hash or "", css_hide))
         out('<a href="%s%s" title="immutable hash: %s%s"%s>short</a>' % (BASE_PATH, short_hash, BASE_URL, short_hash, css_hide))
         if data_hash:
             out('<input type="hidden" name="prev" value="%s">' % data_hash)
