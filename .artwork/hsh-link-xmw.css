@@ -7,6 +7,7 @@
 textarea,input,select { border-style: None; }
 .text { height: 90vh; }
 textarea { height:100%; width:100%; }
+.footer { margin-top:3px; }
 
 @media screen {
 	body { font-family:dina; background-color:#2d2d2d; color:#729fcf; }
