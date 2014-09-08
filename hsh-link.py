@@ -236,15 +236,15 @@ def handler(req):
             out('<option value="%s"%s>%s</option>' % (output_, output == output_ and ' selected' or '', output_))
         out('</select><input type="submit" id="store"'
                     ' title="safe changed data" value="save"></div>')
-        out('<div class="text"><textarea placeholder="Start typing ..." name="content" oninput="data_modified()">%s</textarea></div>' % (data or ""))
-        out('</form>')
+        out('<div class="text"><textarea placeholder="Start typing ..." name="content" id="content" onkeyup="update_lineno()" oninput="data_modified()">%s</textarea></div>' % (data or ""))
         out('<div class="footer">(c) <a href="http://xmw.de/">xmw.de</a> 2014 '
             '<a href="https://github.com/xmw/hsh-link">sources</a> '
             '<a href="http://validator.w3.org/check?uri=referer">html5</a> '
             '<a href="http://jigsaw.w3.org/css-validator/check/referer">css3</a> '
             'theme=<a href="?theme=xmw">xmw</a> '
-            '<a href="?theme=white">white</a> ')
-        out('</div></div>\n</body>\n</html>\n')
+            '<a href="?theme=white">white</a>'
+            ' line=<input type="text" name="lineno" id="lineno" value="" size="4" readonly>')
+        out('</div></form></div>\n</body>\n</html>\n')
     elif output == 'qr_png':
         import qrencode, PIL.ImageOps
         ver, s, img = qrencode.encode(BASE_URL + (link_name or data_hash or ''), 
