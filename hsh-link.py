@@ -1,7 +1,7 @@
 # vim: tabstop=4 fileencoding=utf-8
 # copyright Michael Weber (michael at xmw dot de) 2014
 
-from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH, COOKIE_SECRET
+from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH, COOKIE_SECRET, THEMES
 OUTPUT = 'default', 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
 
 import base64, hashlib, magic, mod_python.apache, mod_python.Cookie, os, re, time
@@ -194,18 +194,17 @@ def handler(req):
     out = text.append
     if output == 'html':
         # handle theme
+        theme = THEMES[0]
         cookie = mod_python.Cookie.get_cookie(req, 'theme', mod_python.Cookie.MarshalCookie, secret=COOKIE_SECRET)
         if type(cookie) is mod_python.Cookie.MarshalCookie:
-            theme = cookie.value
-        else:
-            theme = 'xmw'
-        theme = get_last_value(var, 'theme', theme)
-        if not theme in ('xmw', 'white'):
-            theme = 'xmw'
-        cookie = mod_python.Cookie.MarshalCookie('theme', theme, secret=COOKIE_SECRET)
-        cookie.expires = time.time() + 86400 * 365
-        mod_python.Cookie.add_cookie(req, cookie)
-    
+            if cookie.value in THEMES:
+                theme = cookie.value
+        if get_last_value(var, 'theme') in THEMES:
+            theme = get_last_value(var, 'theme')
+            cookie = mod_python.Cookie.MarshalCookie('theme', theme, secret=COOKIE_SECRET)
+            cookie.expires = time.time() + 86400 * 365
+            mod_python.Cookie.add_cookie(req, cookie)
+
         req.content_type = "text/html; charset=utf-8"
         out('<!DOCTYPE html>\n\n<html>\n<head>')
         out('<meta http-equiv="Content-Type" content="text/html; charset=utf-8">')
