@@ -9,7 +9,7 @@ import base64, hashlib, magic, mod_python.apache, mod_python.Cookie, os, re, tim
 hsh = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s).digest()).rstrip('=')
 
 def subdirfn(repo, fn):
-    if len(fn) < 4:
+    if fn.count('/') or len(fn) < 4:
         return ['', '']
     return os.path.join(repo, fn[0:2], fn[2:4]), fn
 
@@ -91,7 +91,8 @@ def handler(req):
 
     # data_hash, link_name or abrev. data_hash
     data, data_hash, link_name, link_hash = None, None, None, None
-    obj = os.path.normpath(req.uri)[len(BASE_PATH):]
+    #obj = req.uri[len(BASE_PATH):]
+    obj = req.unparsed_uri[len(BASE_PATH):].split('?')[0]
     if obj == 'robots.txt' or obj.startswith('.artwork/'):
         return mod_python.apache.DECLINED
     if not len(obj):
@@ -182,7 +183,7 @@ def handler(req):
     # update browser url?
     if output == 'html':
         if new_link_name and data_hash:
-            mod_python.util.redirect(req, "%s%s" % (BASE_PATH, link_name))
+            mod_python.util.redirect(req, "%s%s" % (BASE_URL, link_name))
             return mod_python.apache.OK
         if not link_name and new_data:
             mod_python.util.redirect(req, "%s%s" % (BASE_PATH, data_hash))
@@ -212,11 +213,13 @@ def handler(req):
         out('<script src="%s.artwork/hsh-link.js"></script>' % BASE_PATH)
         out('<title>%s</title>\n</head>' % BASE_URL)
         out('<body onLoad="body_loaded()">\n<div class="container">')
-        out('<form action="%s" method="POST" enctype="multipart/form-data">' % \
-            (link_name or BASE_PATH))
+        out('<form action="%s%s" method="POST" enctype="multipart/form-data">' % \
+            (BASE_URL, link_name or ''))
         out('<div class="control"><a href="%s" title="start from scratch/">clear</a> | ' % BASE_PATH)
-        out('%s: <input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' %
-            (link_name and ('<a href="%s%s" title="variable named link">symlink</a>' % (BASE_PATH, link_name)) or "symlink", link_name or ""))
+        link_text_ = 'symlink'
+        if link_name:
+            link_text_ = '<a href="%s%s">symlink</a>' % (BASE_URL, link_name)
+        out('%s=<input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' % (link_text_, link_name or ""))
         if data_hash:
             short_hash, css_hide = uniq_name(STORAGE_DIR, data_hash), ''
         else:
