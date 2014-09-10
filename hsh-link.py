@@ -61,7 +61,7 @@ def handler(req):
     #guess output format
     output = 'default'
     agent = req.headers_in.get('User-Agent', '').lower()
-    if agent.count('mozilla') or agent.count('opera') or agent.count('validator'):
+    if filter(lambda a: agent.count(a), ('mozilla', 'opera', 'validator', 'w3m', 'lynx', 'links')):
         agent = 'graphic'
     else:
         agent = 'text'
