@@ -4,7 +4,7 @@
 @font-face { font-family:dina; src:url(/.artwork/dina10px.ttf); }
 @font-face { font-family:dinabf; src:url(/.artwork/dina10pxbold.ttf); }
 
-textarea,input,select { border-style:None; background:transparent; }
+textarea,input,select { border:1px solid #ccc; background:transparent; }
 .text { height: 90vh; margin-top:3px; margin-bottom:3px; }
 textarea { height:100%; width:100%; margin:0px; }
 
