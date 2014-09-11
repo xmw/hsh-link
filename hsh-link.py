@@ -6,6 +6,13 @@ OUTPUT = 'default', 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', '
 
 import base64, hashlib, magic, mod_python.apache, mod_python.Cookie, os, re, time
 
+try:
+    import pyclamd
+    clamav = pyclamd.ClamdAgnostic()
+    clamav.ping()
+except ValueError, NameError:
+    clamav = None
+
 hsh = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s).digest()).rstrip('=')
 
 def subdirfn(repo, fn):
@@ -172,6 +179,8 @@ def handler(req):
             new_data = new_data.replace('\r\n', '\n')
         new_data_hash = hsh(new_data)
         if not is_storage(STORAGE_DIR, new_data_hash):
+            if clamav and clamav.scan_stream(new_data):
+                return mod_python.apache.HTTP_FORBIDDEN
             write_storage(STORAGE_DIR, new_data_hash, new_data)
         data, data_hash  = new_data, new_data_hash
 
