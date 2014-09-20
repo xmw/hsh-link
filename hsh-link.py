@@ -1,10 +1,13 @@
-# vim: tabstop=4 fileencoding=utf-8
+# vim: tabstop=4
+# vim: set fileencoding=utf-8
 # copyright Michael Weber (michael at xmw dot de) 2014
 
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH, COOKIE_SECRET, THEMES
 OUTPUT = 'default', 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
 
 import base64, hashlib, ipaddress, magic,  mod_python.util, mod_python.apache, mod_python.Cookie, os, re, time
+
+import fixup
 
 try:
     import pyclamd
@@ -13,7 +16,7 @@ try:
 except (ValueError, NameError):
     clamav = None
 
-hsh = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s).digest()).rstrip('=')
+hsh = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s.encode()).digest()).decode().rstrip('=')
 
 def subdirfn(repo, fn):
     if fn.count('/') or len(fn) < 4:
@@ -26,7 +29,7 @@ def is_storage(repo, fn):
 def read_storage(repo, fn):
     fn = os.path.join(*subdirfn(repo, fn))
     if os.path.exists(fn):
-        f = file(fn, 'r')
+        f = open(fn, 'r')
         content = f.read()
         f.close()
         return content
@@ -36,7 +39,7 @@ def write_storage(repo, fn, data):
     d, fn = subdirfn(repo, fn)
     if not os.path.exists(d):
         os.makedirs(d, mode=0o770)
-    f = file(os.path.join(d, fn), 'w')
+    f = open(os.path.join(d, fn), 'w')
     f.write(data)
     f.close()
 
@@ -55,12 +58,6 @@ def uniq_name(repo, fn):
             return fn[:i]
     return fn
     
-def get_last_value(fieldstorage, name, default=None):
-    cand = fieldstorage.getlist(name)
-    if cand:
-        return cand[-1].value
-    return default
-
 def is_mptcp(req):
     ip = ipaddress.ip_address(req.subprocess_env['REMOTE_ADDR'])
     port = int(req.subprocess_env['REMOTE_PORT'], 10)
@@ -76,20 +73,27 @@ def is_mptcp(req):
         if line.strip().split()[5] == ref:
             return True
     return False
-       
+
 def handler(req):
     req.add_common_vars()
-    var = mod_python.util.FieldStorage(req, keep_blank_values=True)
+    var = mod_python.util.FieldStorage(req)
+    def get_last_value(name, default=None):
+        ret = var.getlist(name) and var.getlist(name)[-1].value or default
+        if isinstance(ret, bytes):
+            ret = ret.decode()
+        return ret
+
+    #var = mod_python.util.FieldStorage(req, keep_blank_values=True)
     BASE_URL = BASE_PROTO + req.headers_in['Host'] + BASE_PATH
 
     #guess output format
     output = 'default'
     agent = req.headers_in.get('User-Agent', '').lower()
-    if filter(lambda a: agent.count(a), ('mozilla', 'opera', 'validator', 'w3m', 'lynx', 'links')):
+    if list(filter(lambda a: agent.count(a), ('mozilla', 'opera', 'validator', 'w3m', 'lynx', 'links'))):
         agent = 'graphic'
     else:
         agent = 'text'
-    output = get_last_value(var, 'output', output)
+    output = get_last_value('output', output)
     if not output in OUTPUT:
         return mod_python.apache.HTTP_BAD_REQUEST
     if output == 'qr':
@@ -104,14 +108,16 @@ def handler(req):
         return mod_python.apache.HTTP_BAD_REQUEST
     elif req.method == 'PUT':
         new_data = req.read()
-    elif req.method in ('GET', 'POST'):
-        new_data = get_last_value(var, 'content')
+    elif req.method == 'GET':
+        new_data = get_last_value('content')
+    elif req.method == 'POST':
+        new_data = get_last_value('content')
     else:
         return mod_python.apache.HTTP_BAD_REQUEST
     # append
-    append = get_last_value(var, 'append')
+    append = get_last_value('append')
 
-    new_link_name = get_last_value(var, 'link')
+    new_link_name = get_last_value('link')
 
     # data_hash, link_name or abrev. data_hash
     data, data_hash, link_name, link_hash = None, None, None, None
@@ -147,7 +153,7 @@ def handler(req):
             link_name, link_hash = new_link_name, hsh(new_link_name)
 
     # wait for data or update of link
-    if get_last_value(var, 'wait') != None:
+    if get_last_value('wait') != None:
         data_hash = read_storage(LINK_DIR, link_hash)
         ref = data_hash
         while ref == data_hash:
@@ -162,7 +168,7 @@ def handler(req):
             m = re.compile('^(?:http|https|ftp)://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$')
             if m.match(data):
                 mod_python.util.redirect(req, data.rstrip(), permanent=True, text=data)
-            m = magic.Magic(magic.MAGIC_MIME).from_buffer(data)
+            m = magic.Magic(magic.MAGIC_MIME).from_buffer(data).decode()
             if m.startswith('image/') or m == 'application/pdf':
                 output = 'raw'
 
@@ -192,11 +198,11 @@ def handler(req):
             new_data = (data or "") + new_data
         if len(new_data) > FILE_SIZE_MAX:
             return mod_python.apache.HTTP_REQUEST_ENTITY_TOO_LARGE
-        if get_last_value(var, 'linefeed') == 'unix':
+        if get_last_value('linefeed') == 'unix':
             new_data = new_data.replace('\r\n', '\n')
         new_data_hash = hsh(new_data)
         if not is_storage(STORAGE_DIR, new_data_hash):
-            if clamav and clamav.scan_stream(new_data):
+            if clamav and clamav.scan_stream(new_data.encode()):
                 return mod_python.apache.HTTP_FORBIDDEN
             write_storage(STORAGE_DIR, new_data_hash, new_data)
         data, data_hash  = new_data, new_data_hash
@@ -226,8 +232,8 @@ def handler(req):
         if type(cookie) is mod_python.Cookie.MarshalCookie:
             if cookie.value in THEMES:
                 theme = cookie.value
-        if get_last_value(var, 'theme') in THEMES:
-            theme = get_last_value(var, 'theme')
+        if get_last_value('theme') in THEMES:
+            theme = get_last_value('theme')
             cookie = mod_python.Cookie.MarshalCookie('theme', theme, secret=COOKIE_SECRET)
             cookie.expires = time.time() + 86400 * 365
             mod_python.Cookie.add_cookie(req, cookie)
