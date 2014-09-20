@@ -10,7 +10,7 @@ try:
     import pyclamd
     clamav = pyclamd.ClamdAgnostic()
     clamav.ping()
-except ValueError, NameError:
+except (ValueError, NameError):
     clamav = None
 
 hsh = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s).digest()).rstrip('=')
@@ -35,7 +35,7 @@ def read_storage(repo, fn):
 def write_storage(repo, fn, data):
     d, fn = subdirfn(repo, fn)
     if not os.path.exists(d):
-        os.makedirs(d, mode=0770)
+        os.makedirs(d, mode=0o770)
     f = file(os.path.join(d, fn), 'w')
     f.write(data)
     f.close()
@@ -274,7 +274,7 @@ def handler(req):
     elif output == 'qr_utf8':
         import qr_encode
         v, s, img = qr_encode.encode(BASE_URL + (link_name or data_hash or ''), 0, 0, 2, True)
-        sym = lambda (u, l): ((' ', '▄') , ('▀', '█'))[ord(u)/255][ord(l)/255]
+        sym = lambda ul: ((' ', '▄') , ('▀', '█'))[ord(ul[0])/255][ord(ul[1])/255]
         img = '\xff'*s + img + '\xff'*s + '\xff'*s
         for y in range((s + 1) / 2 + 1):
             out('█' + ''.join(map(sym, zip(
