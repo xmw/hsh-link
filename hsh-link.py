@@ -57,20 +57,23 @@ def uniq_name(repo, fn):
         if find_storage(repo, fn[:i]) == fn:
             return fn[:i]
     return fn
+
+def mptcp2ipaddress(s):
+    if len(s) == 32:
+        return ipaddress.ip_address((
+                '{06}{07}{04}{05}:{02}{03}{00}{01}:' +
+                '{14}{15}{12}{13}:{10}{11}{08}{09}:' +
+                '{22}{23}{20}{21}:{18}{19}{16}{17}:' +
+                '{30}{31}{28}{29}:{26}{27}{24}{25}' ).format(*s))
+    else:
+        return ipaddress.ip_address('{3}.{2}.{1}.{0}'.format(*s))
     
 def is_mptcp(req):
     ip = ipaddress.ip_address(req.subprocess_env['REMOTE_ADDR'])
-    port = int(req.subprocess_env['REMOTE_PORT'], 10)
-    if ip.version == 6:
-        ref = ''.join(list(map(lambda s: '%04X' % int(s, 16), ip.exploded.split(':'))))
-        ref = ''.join(map(lambda i: ref[2*i:2*i+2], 
-            (3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12))) \
-            + ':' + '%04X' % port
-    else:
-        ref = ''.join(map(lambda s: '%02X' % int(s, 10), ip.exploded.split('.')[::-1])) \
-            + ':' + '%04X' % port
-    for line in open('/proc/net/mptcp', 'r').readlines():
-        if line.strip().split()[5] == ref:
+    port = int(req.subprocess_env['REMOTE_PORT'])
+    for line in open('/proc/net/mptcp', 'r').readlines()[1:]:
+        mp_ip, mp_port = line.split()[5].split(':')
+        if ip == mptcp2ipaddress(mp_ip) and port == int(mp_port, 16):
             return True
     return False
 
@@ -276,7 +279,7 @@ def handler(req):
             'theme=<a href="?theme=xmw">xmw</a> '
             '<a href="?theme=white">white</a>'
             ' line=<input type="text" name="lineno" id="lineno" value="" size="4" readonly>')
-        out('<a href="http://www.multipath-tcp.org/">mptcp</a>=%s'
+        out('<a href="http://www.multipath-tcp.org/">mptcp</a>=<a href="http://cdn.meme.am/instances/500x/54513486.jpg">%s</a>'
             % (is_mptcp(req) and 'yes' or 'no'))
         out('</div></form></div>\n</body>\n</html>\n')
     elif output in ('qr_png', 'qr_ascii', 'qr_utf8'):
