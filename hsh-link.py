@@ -4,7 +4,7 @@
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH, COOKIE_SECRET, THEMES
 OUTPUT = 'default', 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
 
-import base64, hashlib, magic, mod_python.apache, mod_python.Cookie, os, re, time
+import base64, hashlib, magic, mod_python.util, mod_python.apache, mod_python.Cookie, os, re, time
 
 try:
     import pyclamd
