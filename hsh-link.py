@@ -67,7 +67,7 @@ def is_mptcp(req):
             (3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12))) \
             + ':' + '%04X' % port
     else:
-        ref = ''.join(map(lambda s: '%02X' % int(s, 10), ip.split('.')[::-1])) \
+        ref = ''.join(map(lambda s: '%02X' % int(s, 10), ip.exploded.split('.')[::-1])) \
             + ':' + '%04X' % port
     for line in open('/proc/net/mptcp', 'r').readlines():
         if line.strip().split()[5] == ref:
