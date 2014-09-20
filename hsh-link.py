@@ -5,7 +5,7 @@
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH, COOKIE_SECRET, THEMES
 OUTPUT = 'default', 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
 
-import base64, hashlib, ipaddress, magic,  mod_python.util, mod_python.apache, mod_python.Cookie, os, re, time
+import base64, hashlib, io, ipaddress, magic, mod_python.util, mod_python.apache, mod_python.Cookie, os, PIL.ImageOps, qrencode, re, time
 
 import fixup
 
@@ -100,7 +100,7 @@ def handler(req):
         if agent == 'graphic':
             output = 'qr_png'
         else:
-            output = 'qr_text'
+            output = 'qr_utf8'
 
     # new_content
     if req.method == 'DELETE':
@@ -279,32 +279,26 @@ def handler(req):
         out('<a href="http://www.multipath-tcp.org/">mptcp</a>=%s'
             % (is_mptcp(req) and 'yes' or 'no'))
         out('</div></form></div>\n</body>\n</html>\n')
-    elif output == 'qr_png':
-        import qrencode, PIL.ImageOps
+    elif output in ('qr_png', 'qr_ascii', 'qr_utf8'):
         ver, s, img = qrencode.encode(BASE_URL + (link_name or data_hash or ''), 
             level=qrencode.QR_ECLEVEL_L, hint=qrencode.QR_MODE_8, case_sensitive=True)
         img = PIL.ImageOps.expand(img, border=1, fill='white')
-        img = img.resize((s * 8, s * 8), PIL.Image.NEAREST)
-        req.content_type = "image/png; charset=utf-8"
-        img.save(req, 'PNG')
-    elif output == 'qr_ascii':
-        import qr_encode
-        v, s, img = qr_encode.encode(BASE_URL + (link_name or data_hash or ''), 0, 0, 2, True)
-        sym = lambda p: ('  ', '@@')[ord(p)/255]
-        out('@@' * (s + 2))
-        for y in range(s):
-            out('@@' + ''.join(map(sym, img[y*s:(y+1)*s])) + '@@')
-        out('@@' * (s + 2))
-        out('')
-    elif output == 'qr_utf8':
-        import qr_encode
-        v, s, img = qr_encode.encode(BASE_URL + (link_name or data_hash or ''), 0, 0, 2, True)
-        sym = lambda ul: ((' ', '▄') , ('▀', '█'))[ord(ul[0])/255][ord(ul[1])/255]
-        img = '\xff'*s + img + '\xff'*s + '\xff'*s
-        for y in range((s + 1) / 2 + 1):
-            out('█' + ''.join(map(sym, zip(
-                img[(y*2)*s:(y*2+1)*s],img[(y*2+1)*s:(y*2+2)*s]))) + '█')
-        out('')
+        if output == 'qr_png':
+            img = img.resize((s * 8, s * 8), PIL.Image.NEAREST)
+            req.content_type = "image/png; charset=utf-8"
+            img.save(req, 'PNG')
+        elif output == 'qr_ascii':
+            sym = ('  ', '@@')
+            for y in range(img.size[1]):
+                out(''.join(map(lambda x: sym[img.getpixel((x,y)) != 0], range(img.size[0]))))
+            out('')
+        elif output == 'qr_utf8':
+            sym = (' ', '▄') , ('▀', '█')
+            for y in range(img.size[1]//2):
+                out(''.join(map(lambda x: sym[img.getpixel((x,y*2)) != 0][img.getpixel((x,y*2+1)) != 0], range(img.size[0]))))
+            if img.size[1] % 2:
+                out(''.join(map(lambda x: sym[img.getpixel((x,img.size[1]-1)) != 0][0], range(img.size[0]))))
+            out('')
     elif output == 'raw':
         req.content_type = ''
         if not data:
