@@ -4,7 +4,7 @@
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH, COOKIE_SECRET, THEMES
 OUTPUT = 'default', 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
 
-import base64, hashlib, magic, mod_python.util, mod_python.apache, mod_python.Cookie, os, re, time
+import base64, hashlib, ipaddress, magic,  mod_python.util, mod_python.apache, mod_python.Cookie, os, re, time
 
 try:
     import pyclamd
@@ -60,8 +60,25 @@ def get_last_value(fieldstorage, name, default=None):
     if cand:
         return cand[-1].value
     return default
+
+def is_mptcp(req):
+    ip = ipaddress.ip_address(req.subprocess_env['REMOTE_ADDR'])
+    port = int(req.subprocess_env['REMOTE_PORT'], 10)
+    if ip.version == 6:
+        ref = ''.join(list(map(lambda s: '%04X' % int(s, 16), ip.exploded.split(':'))))
+        ref = ''.join(map(lambda i: ref[2*i:2*i+2], 
+            (3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12))) \
+            + ':' + '%04X' % port
+    else:
+        ref = ''.join(map(lambda s: '%02X' % int(s, 10), ip.split('.')[::-1])) \
+            + ':' + '%04X' % port
+    for line in open('/proc/net/mptcp', 'r').readlines():
+        if line.strip().split()[5] == ref:
+            return True
+    return False
        
 def handler(req):
+    req.add_common_vars()
     var = mod_python.util.FieldStorage(req, keep_blank_values=True)
     BASE_URL = BASE_PROTO + req.headers_in['Host'] + BASE_PATH
 
@@ -253,6 +270,8 @@ def handler(req):
             'theme=<a href="?theme=xmw">xmw</a> '
             '<a href="?theme=white">white</a>'
             ' line=<input type="text" name="lineno" id="lineno" value="" size="4" readonly>')
+        out('<a href="http://www.multipath-tcp.org/">mptcp</a>=%s'
+            % (is_mptcp(req) and 'yes' or 'no'))
         out('</div></form></div>\n</body>\n</html>\n')
     elif output == 'qr_png':
         import qrencode, PIL.ImageOps
