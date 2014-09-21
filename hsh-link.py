@@ -66,7 +66,8 @@ def mptcp2ipaddress(s):
                 '{22}{23}{20}{21}:{18}{19}{16}{17}:' +
                 '{30}{31}{28}{29}:{26}{27}{24}{25}' ).format(*s))
     else:
-        return ipaddress.ip_address('{3}.{2}.{1}.{0}'.format(*s))
+        return ipaddress.ip_address('.'.join(map(lambda s: str(int(s, 16)),
+        ('{6}{7}.{4}{5}.{2}{3}.{0}{1}'.format(*s)).split('.'))))
     
 def is_mptcp(req):
     ip = ipaddress.ip_address(req.subprocess_env['REMOTE_ADDR'])
