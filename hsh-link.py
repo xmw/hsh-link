@@ -43,6 +43,24 @@ def write_storage(repo, fn, data):
     f.write(data)
     f.close()
 
+def get_link_history(fn):
+    data = read_storage(LINK_DIR, fn) or ''
+    ret = []
+    for line in data.rstrip('\n').split('\n'):
+        num, link = line.split('\t', 1)
+        ret.append((int(num), link))
+    return ret
+
+def append_link_history(fn, link):
+    data = get_link_history(fn)
+    num = 0
+    if data:
+        num = data[-1][0] + 1
+    else:
+        num = 0
+    data.append((num, link))
+    write_storage(LINK_DIR, fn, '\n'.join(map(lambda s: '%i\t%s' % (s[0], s[1]), data)))
+
 def find_storage(repo, partfn):
     d, partfn = subdirfn(repo, partfn)
     if not os.path.exists(d):
@@ -154,7 +172,9 @@ def handler(req):
             if link_hash == None and link_name != None:
                 link_hash = hsh(link_name)
             if data_hash == None and link_hash != None:
-                data_hash = read_storage(LINK_DIR, link_hash)
+                hist_ = get_link_history(link_hash)
+                if hist_:
+                    data_hash = hist_[-1][1]
             link_name, link_hash = new_link_name, hsh(new_link_name)
 
     # wait for data or update of link
@@ -192,7 +212,9 @@ def handler(req):
     if link_hash == None and link_name != None:
         link_hash = hsh(link_name)
     if data_hash == None and link_hash != None:
-        data_hash = read_storage(LINK_DIR, link_hash)
+        hist_ = get_link_history(link_hash)
+        if hist_:
+            data_hash = hist_[-1][1]
     if append or output in ('html', 'raw'):
         if data == None and data_hash != None:
             data = read_storage(STORAGE_DIR, data_hash)
@@ -215,7 +237,7 @@ def handler(req):
     # update link?
     if new_link_name != None or new_data != None:
         if link_hash != None and data_hash != None:
-            write_storage(LINK_DIR, link_hash, data_hash)
+            append_link_history(link_hash, data_hash)
 
     # update browser url?
     if output == 'html':
