@@ -81,8 +81,9 @@ def is_mptcp(req):
 def handler(req):
     req.add_common_vars()
     var = mod_python.util.FieldStorage(req)
-    def get_last_value(name, default=None):
-        ret = var.getlist(name) and var.getlist(name)[-1].value or default
+    def get_last_value(name, ret=None):
+        if var.getlist(name):
+            ret = var.getlist(name)[-1].value
         if isinstance(ret, bytes):
             ret = ret.decode()
         return ret
