@@ -179,11 +179,7 @@ def handler(req):
 
     # wait for data or update of link
     if get_last_value('wait') != None:
-        data_hash = read_storage(LINK_DIR, link_hash)
-        ref = data_hash
-        while ref == data_hash:
-            time.sleep(1)
-            data_hash = read_storage(LINK_DIR, link_hash)
+        return mod_python.apache.HTTP_BAD_REQUEST
 
     # url shortener, mime image magic
     if output == 'default' and link_name == None:
