@@ -96,9 +96,11 @@ def mptcp2ipaddress(s):
                 '{14}{15}{12}{13}:{10}{11}{08}{09}:' +
                 '{22}{23}{20}{21}:{18}{19}{16}{17}:' +
                 '{30}{31}{28}{29}:{26}{27}{24}{25}' ).format(*s))
-    else:
+    elif len(s) == 8:
         return ipaddress.ip_address('.'.join(map(lambda s: str(int(s, 16)),
         ('{6}{7}.{4}{5}.{2}{3}.{0}{1}'.format(*s)).split('.'))))
+    else:
+        raise ValueError("Unsupported IP address length")
     
 def is_mptcp(req):
     ip = ipaddress.ip_address(req.subprocess_env['REMOTE_ADDR'])
