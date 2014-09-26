@@ -71,7 +71,7 @@ def append_link_history(link, data_hash):
         num = 0
     hist.append((num, data_hash))
     write_storage(LINK_DIR, hsh(link),
-        '\n'.join(map(lambda s: '%i\t%s' % (s[0], s[1]), hist)))
+        '\n'.join(map(lambda s: '%i\t%s' % (s[0], s[1]), hist)) + '\n')
     return num
 
 def find_storage(repo, partfn):
