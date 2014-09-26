@@ -157,7 +157,7 @@ def handler(req):
         data_hash = hsh('')
 
     # load data
-    data = read_storage(STORAGE_DIR, data_hash)
+    data = read_storage(STORAGE_DIR, data_hash) or ''
 
     # handle new data
     if req.method == 'PUT':
