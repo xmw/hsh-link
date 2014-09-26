@@ -3,7 +3,7 @@
 # copyright Michael Weber (michael at xmw dot de) 2014
 
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH, COOKIE_SECRET, THEMES
-OUTPUT = 'default', 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
+OUTPUT = 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
 
 import base64, hashlib, io, ipaddress, magic, mod_python.util, mod_python.apache, mod_python.Cookie, os, PIL.ImageOps, qrencode, re, time
 
@@ -335,5 +335,8 @@ def handler(req):
         if not data_hash:
             return mod_python.apache.HTTP_NOT_FOUND
         out("%s%s\n" % (BASE_URL, uniq_name(STORAGE_DIR, data_hash)))
+    else:
+        return mod_python.apache.HTTP_BAD_REQUEST
+    text += debug
     req.write("\n".join(text))
     return mod_python.apache.OK
