@@ -111,153 +111,111 @@ def is_mptcp(req):
             return True
     return False
 
+
 def handler(req):
+    debug = []
+    err = lambda s: debug.append(str(s) + '<br>')
+    path = req.unparsed_uri[len(BASE_PATH):].split('?')[0]
+    if path == 'robots.txt' or path.startswith('.artwork/'):
+        # fall back to next apache handler
+        return mod_python.apache.DECLINED
+
+    if not req.method in ('GET', 'POST', 'PUT'):
+        return mod_python.apache.HTTP_BAD_REQUEST
+
     req.add_common_vars()
     var = mod_python.util.FieldStorage(req)
     def get_last_value(name, ret=None):
-        if var.getlist(name):
-            ret = var.getlist(name)[-1].value
+        cand = var.getlist(name)
+        if len(cand):
+            ret = cand[-1].value
         if isinstance(ret, bytes):
             ret = ret.decode()
         return ret
 
-    #var = mod_python.util.FieldStorage(req, keep_blank_values=True)
-    BASE_URL = BASE_PROTO + req.headers_in['Host'] + BASE_PATH
+    try:
+        rev = int(get_last_value('rev'))
+    except TypeError:
+        rev=None
+    except ValueError:
+        return mod_python.apache.HTTP_BAD_REQUEST
 
-    #guess output format
-    output = 'default'
-    agent = req.headers_in.get('User-Agent', '').lower()
-    if list(filter(lambda a: agent.count(a), ('mozilla', 'opera', 'validator', 'w3m', 'lynx', 'links'))):
-        agent = 'graphic'
+    # understand path, link+revision
+    link = get_last_value('link')
+    if is_storage(STORAGE_DIR, hsh(path)):
+        data_hash = path
+    elif link == None and is_storage(LINK_DIR, hsh(path)):
+        if link == None:
+            link = path
+        rev, data_hash = get_link(link, rev, get_link(link))
+    elif find_storage(STORAGE_DIR, path):
+        data_hash = find_storage(STORAGE_DIR, path)
+        link = get_last_value('link')
     else:
-        agent = 'text'
-    output = get_last_value('output', output)
-    if not output in OUTPUT:
-        return mod_python.apache.HTTP_BAD_REQUEST
-    if output == 'qr':
-        if agent == 'graphic':
-            output = 'qr_png'
-        else:
-            output = 'qr_utf8'
+        if path:
+            link = path
+        data_hash = hsh('')
 
-    # new_content
-    if req.method == 'DELETE':
-        req.write("DELETE not yet implented.\n")
-        return mod_python.apache.HTTP_BAD_REQUEST
-    elif req.method == 'PUT':
-        new_data = req.read()
-    elif req.method == 'GET':
-        new_data = get_last_value('content')
-    elif req.method == 'POST':
-        new_data = get_last_value('content')
+    # load data
+    data = read_storage(STORAGE_DIR, data_hash)
+
+    # handle new data
+    if req.method == 'PUT':
+        content = req.read()
     else:
-        return mod_python.apache.HTTP_BAD_REQUEST
-    # append
-    append = get_last_value('append')
-
-    new_link_name = get_last_value('link')
-
-    # data_hash, link_name or abrev. data_hash
-    data, data_hash, link_name, link_hash = None, None, None, None
-    #obj = req.uri[len(BASE_PATH):]
-    obj = req.unparsed_uri[len(BASE_PATH):].split('?')[0]
-    if obj == 'robots.txt' or obj.startswith('.artwork/'):
-        return mod_python.apache.DECLINED
-    if not len(obj):
-        pass
-    elif is_storage(STORAGE_DIR, obj):
-        data_hash = obj
-    else:
-        t = hsh(obj)
-        if is_storage(LINK_DIR, t):
-            link_name, link_hash = obj, t
-        else:
-            t = find_storage(STORAGE_DIR, obj)
-            if t:
-                data_hash = t
-            else:
-                new_link_name = obj
- 
-    # switch to new link_name
-    if new_link_name != None:
-        if new_link_name == link_name: # no update
-            new_link_name = None
-        else:
-            # deref old symlink, if new_link but no new_data
-            if link_hash == None and link_name != None:
-                link_hash = hsh(link_name)
-            if data_hash == None and link_hash != None:
-                hist_ = get_link_history(link_hash)
-                if hist_:
-                    data_hash = hist_[-1][1]
-            link_name, link_hash = new_link_name, hsh(new_link_name)
-
-    # wait for data or update of link
-    if get_last_value('wait') != None:
-        return mod_python.apache.HTTP_BAD_REQUEST
-
-    # url shortener, mime image magic
-    if output == 'default' and link_name == None:
-        if data_hash != None and data == None:
-            data = read_storage(STORAGE_DIR, data_hash)
-        if data != None and not req.headers_in.get('referer', '').startswith(BASE_URL):
-            m = re.compile('^(?:http|https|ftp)://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$')
-            if m.match(data):
-                mod_python.util.redirect(req, data.rstrip(), permanent=True, text=data)
-            m = magic.Magic(magic.MAGIC_MIME).from_buffer(data).decode()
-            if m.startswith('image/') or m == 'application/pdf':
-                output = 'raw'
-
-    if output == 'default':
-        if agent == 'text':
-            if new_link_name and not data_hash and not new_data:
-                return mod_python.apache.HTTP_NOT_FOUND
-            if new_link_name or new_data:
-                output = 'link'
-            else:
-                output = 'raw'
-        else:
-            output = 'html'
-
-    # need old elements?
-    if link_hash == None and link_name != None:
-        link_hash = hsh(link_name)
-    if data_hash == None and link_hash != None:
-        hist_ = get_link_history(link_hash)
-        if hist_:
-            data_hash = hist_[-1][1]
-    if append or output in ('html', 'raw'):
-        if data == None and data_hash != None:
-            data = read_storage(STORAGE_DIR, data_hash)
-
-    # switch to new data
-    if new_data != None:
-        if append: # need old data
-            new_data = (data or "") + new_data
-        if len(new_data) > FILE_SIZE_MAX:
+        content = get_last_value('content', None)
+        if req.method == 'POST':
+            if get_last_value('linefeed') == 'unix':
+                content = content.replace('\r\n', '\n')
+    if content != None:
+        if get_last_value('append', None) == None:
+            data = ''
+        data = data + content
+        if len(data) > FILE_SIZE_MAX:
             return mod_python.apache.HTTP_REQUEST_ENTITY_TOO_LARGE
-        if get_last_value('linefeed') == 'unix':
-            new_data = new_data.replace('\r\n', '\n')
-        new_data_hash = hsh(new_data)
-        if not is_storage(STORAGE_DIR, new_data_hash):
-            if clamav and clamav.scan_stream(new_data.encode()):
+        data_hash = hsh(data)
+        if not is_storage(STORAGE_DIR, data_hash):
+            if clamav and clamav.scan_stream(data.encode()):
                 return mod_python.apache.HTTP_FORBIDDEN
-            write_storage(STORAGE_DIR, new_data_hash, new_data)
-        data, data_hash  = new_data, new_data_hash
+            write_storage(STORAGE_DIR, data_hash, data)
+    del(content)
 
-    # update link?
-    if new_link_name != None or new_data != None:
-        if link_hash != None and data_hash != None:
-            append_link_history(link_hash, data_hash)
+    #update link
+    if link != None and data_hash != None:
+        if data_hash != get_link(link, rev)[1]:
+            rev = append_link_history(link, data_hash)
 
     # update browser url?
-    if output == 'html':
-        if new_link_name and data_hash:
-            mod_python.util.redirect(req, "%s%s" % (BASE_URL, link_name))
+    BASE_URL = BASE_PROTO + req.headers_in['Host'] + BASE_PATH
+    if link == None:
+        short_hash = uniq_name(STORAGE_DIR, data_hash)
+        if path != data_hash and path != short_hash:
+            mod_python.util.redirect(req, "%s%s" % (BASE_URL, short_hash),
+                text="%s%s" % (BASE_URL, data_hash))
+    else:
+        if path != link:
+            mod_python.util.redirect(req, "%s%s" % (BASE_URL, link),
+                text="%s%s" % (BASE_URL, data_hash))
+
+    #guess output format
+    agent = req.headers_in.get('User-Agent', '').lower()
+    if list(filter(lambda a: agent.count(a), ('mozilla', 'opera', 'validator', 'w3m', 'lynx', 'links'))):
+        agent, output = 'graphic', 'html'
+    else:
+        agent, output = 'text', 'raw'
+    output = get_last_value('output', output)
+    if output == 'qr':
+        output = agent == 'graphic' and 'qr_png' or 'qr_utf8'
+
+    # url shortener and mime magic
+    if not req.headers_in.get('referer', '').startswith(BASE_URL):
+        m = re.compile('^(?:http|https|ftp)://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$')
+        if m.match(data):
+            mod_python.util.redirect(req, data.rstrip(), permanent=True, text=data)
             return mod_python.apache.OK
-        if not link_name and new_data:
-            mod_python.util.redirect(req, "%s%s" % (BASE_PATH, data_hash))
-            return mod_python.apache.OK
+        m = magic.Magic(magic.MAGIC_MIME).from_buffer(data).decode()
+        if m.startswith('image/') or m == 'application/pdf':
+            output = 'raw'
 
     #output
     req.content_type = "text/plain; charset=utf-8"
