@@ -6,6 +6,7 @@
 
 textarea,input,select { border-style:None; background:transparent; }
 .text { height: 90vh; margin-top:3px; margin-bottom:3px; }
+.link { width: 25%; }
 textarea { height:100%; width:100%; margin:0px; }
 
 @media screen {
