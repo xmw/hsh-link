@@ -198,7 +198,7 @@ def handler(req):
 
     # update browser url?
     BASE_URL = BASE_PROTO + req.headers_in['Host'] + BASE_PATH
-    if get_last_value('output') == None:
+    if get_last_value('output', 'html') == 'html':
         if link == None:
             short_hash = uniq_name(STORAGE_DIR, data_hash)
             if path != data_hash and path != short_hash:
