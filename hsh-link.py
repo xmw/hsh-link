@@ -43,23 +43,36 @@ def write_storage(repo, fn, data):
     f.write(data)
     f.close()
 
-def get_link_history(fn):
-    data = read_storage(LINK_DIR, fn) or ''
-    ret = []
-    for line in data.rstrip('\n').split('\n'):
-        num, link = line.split('\t', 1)
-        ret.append((int(num), link))
+def get_link_history(link, ret=None):
+    data = read_storage(LINK_DIR, hsh(link))
+    if data:
+        ret = []
+        for line in data.rstrip('\n').split('\n'):
+            rev_, hash_ = line.split('\t', 1)
+            ret.append((int(rev_), hash_))
     return ret
 
-def append_link_history(fn, link):
-    data = get_link_history(fn)
-    num = 0
+def get_link(link, rev=None, ret=(None, None)):
+    data = get_link_history(link)
     if data:
-        num = data[-1][0] + 1
+        if rev != None:
+            for (rev_, data_) in data[::-1]:
+                if rev_ == rev:
+                    return rev_, data_
+        else:
+            return data[-1]
+    return ret
+
+def append_link_history(link, data_hash):
+    hist = get_link_history(link, [])
+    if len(hist):
+        num = hist[-1][0] + 1
     else:
         num = 0
-    data.append((num, link))
-    write_storage(LINK_DIR, fn, '\n'.join(map(lambda s: '%i\t%s' % (s[0], s[1]), data)))
+    hist.append((num, data_hash))
+    write_storage(LINK_DIR, hsh(link),
+        '\n'.join(map(lambda s: '%i\t%s' % (s[0], s[1]), hist)))
+    return num
 
 def find_storage(repo, partfn):
     d, partfn = subdirfn(repo, partfn)
