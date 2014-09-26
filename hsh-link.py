@@ -178,24 +178,11 @@ def handler(req):
             if clamav and clamav.scan_stream(data.encode()):
                 return mod_python.apache.HTTP_FORBIDDEN
             write_storage(STORAGE_DIR, data_hash, data)
-    del(content)
 
     #update link
     if link != None and data_hash != None:
         if data_hash != get_link(link, rev)[1]:
             rev = append_link_history(link, data_hash)
-
-    # update browser url?
-    BASE_URL = BASE_PROTO + req.headers_in['Host'] + BASE_PATH
-    if link == None:
-        short_hash = uniq_name(STORAGE_DIR, data_hash)
-        if path != data_hash and path != short_hash:
-            mod_python.util.redirect(req, "%s%s" % (BASE_URL, short_hash),
-                text="%s%s" % (BASE_URL, data_hash))
-    else:
-        if path != link:
-            mod_python.util.redirect(req, "%s%s" % (BASE_URL, link),
-                text="%s%s" % (BASE_URL, data_hash))
 
     #guess output format
     agent = req.headers_in.get('User-Agent', '').lower()
@@ -203,9 +190,24 @@ def handler(req):
         agent, output = 'graphic', 'html'
     else:
         agent, output = 'text', 'raw'
+        if content:
+            output = 'link'
     output = get_last_value('output', output)
     if output == 'qr':
         output = agent == 'graphic' and 'qr_png' or 'qr_utf8'
+
+    # update browser url?
+    BASE_URL = BASE_PROTO + req.headers_in['Host'] + BASE_PATH
+    if get_last_value('output') == None:
+        if link == None:
+            short_hash = uniq_name(STORAGE_DIR, data_hash)
+            if path != data_hash and path != short_hash:
+                mod_python.util.redirect(req, "%s%s" % (BASE_URL, short_hash),
+                    text="%s%s\n" % (BASE_URL, data_hash))
+        else:
+            if path != link:
+                mod_python.util.redirect(req, "%s%s" % (BASE_URL, link),
+                    text="%s%s\n" % (BASE_URL, data_hash))
 
     # url shortener and mime magic
     if not req.headers_in.get('referer', '').startswith(BASE_URL):
