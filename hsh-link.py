@@ -78,7 +78,7 @@ def find_storage(repo, partfn):
     d, partfn = subdirfn(repo, partfn)
     if not os.path.exists(d):
         return None
-    cand = filter(lambda s: s.startswith(partfn), os.listdir(d))
+    cand = list(filter(lambda s: s.startswith(partfn), os.listdir(d)))
     if not cand:
         return None
     return sorted(cand, key=lambda fn: os.lstat(os.path.join(d, fn)).st_ctime)[0]
