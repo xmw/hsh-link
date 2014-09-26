@@ -241,42 +241,63 @@ def handler(req):
         out('<script src="%s.artwork/hsh-link.js"></script>' % BASE_PATH)
         out('<title>%s</title>\n</head>' % BASE_URL)
         out('<body onLoad="body_loaded()">\n<div class="container">')
-        out('<form action="%s%s" method="POST" enctype="multipart/form-data">' % \
-            (BASE_URL, link_name or ''))
-        out('<div class="control"><a href="%s" title="start from scratch/">clear</a> | ' % BASE_PATH)
-        link_text_ = 'symlink'
-        if link_name:
-            link_text_ = '<a href="%s%s">symlink</a>' % (BASE_URL, link_name)
-        out('%s=<input type="text" placeholder="add a name" name="link" oninput="data_modified()" value="%s">' % (link_text_, link_name or ""))
-        if data_hash:
-            short_hash, css_hide = uniq_name(STORAGE_DIR, data_hash), ''
+        out('<form action="%s" method="POST" enctype="multipart/form-data">'
+            % BASE_PATH)
+        out('<div class="control"><a href="%s" title="start from scratch">clear</a>' % BASE_PATH)
+        short_hash = data_hash and uniq_name(STORAGE_DIR, data_hash)
+        out('<a title="short hash of content: %s" href="%s%s">short</a>'
+            % (short_hash, BASE_PATH, short_hash))
+        out('<a title="long hash of content: %s" href="%s%s">long</a>'
+            % (data_hash, BASE_PATH, data_hash))
+
+        if link:
+            out('link=<a title="latest revision of link: %s" '
+                'href="%s%s">%s</a>' % (link, BASE_PATH, link, link))
+            out('<input type="hidden" name="link" value="%s">' % link)
+            if get_link(link, rev - 1, None):
+                out('rev=<a title="previous revision of link: %s" '
+                    'href="?rev=%s">-</a>' % (rev - 1, rev - 1))
+            else:
+                out('rev=&nbsp;')
+            out('<a title="current revision of link: %s" '
+                'href="?rev=%i">%i</a>' % ( rev, rev, rev ))
+            if get_link(link, rev + 1, None):
+                out('<a title="next revision of link: %s" '
+                    'href="?rev=%s">+</a>' % (rev + 1, rev + 1))
+            else:
+                out('&nbsp;')
         else:
-            short_hash, css_hide = '', ' style="visibility: hidden;"'
-        out('<a href="%s%s" title="immutable hash: %s%s"%s>permalink</a>' % (BASE_PATH, data_hash or "", BASE_URL, data_hash or "", css_hide))
-        out('<a href="%s%s" title="immutable hash: %s%s"%s>short</a>' % (BASE_PATH, short_hash, BASE_URL, short_hash, css_hide))
-        if data_hash:
-            out('<input type="hidden" name="prev" value="%s">' % data_hash)
-        out(' linefeed=<select name="linefeed" id="linefeed" onchange="data_modified()">')
+            out('link=<input type="text" placeholder="add a tag/symlink ..." '
+                'name="link" class="link" value="">')
+        out('linefeed=<select name="linefeed" id="linefeed" '
+            'onchange="data_modified()">')
         lf = (data and data.count('\r\n')) and ('', ' selected') or (' selected', '')
         out('<option value="unix"%s>unix</option><option value="dos"%s>dos</option></select>' % lf)
         out(' output=<select name="output" id="output" onchange="output_selected()">')
         for output_ in OUTPUT:
-            out('<option value="%s"%s>%s</option>' % (output_, output == output_ and ' selected' or '', output_))
-        out('</select><input type="submit" id="store"'
-                    ' title="save changed data" value="save"></div>')
-        out('<div class="text"><textarea placeholder="Start typing ..." name="content" id="content" onclick="update_lineno()" onkeyup="update_lineno()" oninput="data_modified()">%s</textarea></div>' % (data or ""))
+            out('<option value="%s"%s>%s</option>'
+                % (output_, output == output_ and ' selected' or '', output_))
+        out('</select>')
+        out('<input type="submit" id="save" title="save changes" '
+            'value="save"> </div>')
+        out('<div class="text"><textarea placeholder="Start typing ..." '
+            'name="content" id="content" onclick="update_lineno()" '
+            'onkeyup="update_lineno()" oninput="data_modified()">%s</textarea>'
+            '</div>' % data)
         out('<div class="footer">(c) <a href="http://xmw.de/">xmw.de</a> 2014 '
             '<a href="https://github.com/xmw/hsh-link">sources</a> '
             '<a href="http://validator.w3.org/check?uri=referer">html5</a> '
             '<a href="http://jigsaw.w3.org/css-validator/check/referer">css3</a> '
             'theme=<a href="?theme=xmw">xmw</a> '
             '<a href="?theme=white">white</a>'
-            ' line=<input type="text" name="lineno" id="lineno" value="" size="4" readonly>')
-        out('<a href="http://www.multipath-tcp.org/">mptcp</a>=<a href="http://cdn.meme.am/instances/500x/54513486.jpg">%s</a>'
+            ' line=<input type="text" name="lineno" '
+            'id="lineno" value="" size="4" readonly>')
+        out('<a href="http://www.multipath-tcp.org/">mptcp</a>=%s'
             % (is_mptcp(req) and 'yes' or 'no'))
+        out('mimetype=%s' % magic.Magic(magic.MAGIC_MIME).from_buffer(data.encode()).decode())
         out('</div></form></div>\n</body>\n</html>\n')
     elif output in ('qr_png', 'qr_ascii', 'qr_utf8'):
-        ver, s, img = qrencode.encode(BASE_URL + (link_name or data_hash or ''), 
+        ver, s, img = qrencode.encode(BASE_URL + (link or data_hash or ''),
             level=qrencode.QR_ECLEVEL_L, hint=qrencode.QR_MODE_8, case_sensitive=True)
         img = PIL.ImageOps.expand(img, border=1, fill='white')
         if output == 'qr_png':
@@ -297,7 +318,7 @@ def handler(req):
             out('')
     elif output == 'raw':
         req.content_type = ''
-        if not data:
+        if data == None:
              return mod_python.apache.HTTP_NOT_FOUND
         out(data)
     elif output == 'link':
