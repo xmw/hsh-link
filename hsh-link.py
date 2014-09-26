@@ -320,16 +320,10 @@ def handler(req):
             out('')
     elif output == 'raw':
         req.content_type = ''
-        if data == None:
-             return mod_python.apache.HTTP_NOT_FOUND
         out(data)
     elif output == 'link':
-        if not data_hash:
-            return mod_python.apache.HTTP_NOT_FOUND
         out("%s%s\n" % (BASE_URL, data_hash))
     elif output == 'short':
-        if not data_hash:
-            return mod_python.apache.HTTP_NOT_FOUND
         out("%s%s\n" % (BASE_URL, uniq_name(STORAGE_DIR, data_hash)))
     else:
         return mod_python.apache.HTTP_BAD_REQUEST
