@@ -155,7 +155,7 @@ def handler(req):
         elif find_storage(STORAGE_DIR, path):
             data_hash = find_storage(STORAGE_DIR, path)
         else:
-            return mod_python.apache.HTTP_NOT_FOUND
+            data_hash = None
 
     # load data
     data = read_storage(STORAGE_DIR, data_hash or '') or ''
@@ -184,6 +184,11 @@ def handler(req):
     if link != None and data_hash != None:
         if data_hash != get_link(link, rev)[1]:
             rev = append_link_history(link, data_hash)
+    if link == None and data_hash != None and not find_storage(STORAGE_DIR, path):
+        link = path
+        rev = append_link_history(link, data_hash)
+    if data_hash == None:
+        return mod_python.apache.HTTP_NOT_FOUND
 
     #guess output format
     agent = req.headers_in.get('User-Agent', '').lower()
