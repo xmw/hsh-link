@@ -141,23 +141,24 @@ def handler(req):
         return mod_python.apache.HTTP_BAD_REQUEST
 
     # understand path, link+revision
-    link = get_last_value('link')
-    if is_storage(STORAGE_DIR, hsh(path)):
-        data_hash = path
-    elif link == None and is_storage(LINK_DIR, hsh(path)):
-        if link == None:
-            link = path
+    link = get_last_value('link') or None # empty form input
+    if link:
         rev, data_hash = get_link(link, rev, get_link(link))
-    elif find_storage(STORAGE_DIR, path):
-        data_hash = find_storage(STORAGE_DIR, path)
-        link = get_last_value('link')
     else:
-        if path:
+        if len(path) == 0:
+            data_hash = hsh('')
+        elif is_storage(STORAGE_DIR, path):
+            data_hash = path
+        elif get_link(path)[1]:
             link = path
-        data_hash = hsh('')
+            rev, data_hash = get_link(link, rev, get_link(link))
+        elif find_storage(STORAGE_DIR, path):
+            data_hash = find_storage(STORAGE_DIR, path)
+        else:
+            return mod_python.apache.HTTP_NOT_FOUND
 
     # load data
-    data = read_storage(STORAGE_DIR, data_hash) or ''
+    data = read_storage(STORAGE_DIR, data_hash or '') or ''
 
     # handle new data
     if req.method == 'PUT':
