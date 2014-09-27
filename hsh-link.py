@@ -233,20 +233,26 @@ def handler(req):
                 theme = cookie.value
         if get_last_value('theme') in THEMES:
             theme = get_last_value('theme')
-            cookie = mod_python.Cookie.MarshalCookie('theme', theme, secret=COOKIE_SECRET)
+            cookie = mod_python.Cookie.MarshalCookie(
+                'theme', theme, secret=COOKIE_SECRET)
             cookie.expires = time.time() + 86400 * 365
             mod_python.Cookie.add_cookie(req, cookie)
 
         req.content_type = "text/html; charset=utf-8"
         out('<!DOCTYPE html>\n\n<html>\n<head>')
-        out('<meta http-equiv="Content-Type" content="text/html; charset=utf-8">')
-        out('<link rel="stylesheet" type="text/css" href="%s.artwork/hsh-link-%s.css">' % (BASE_PATH, theme))
+        out('<meta http-equiv="Content-Type" content="text/html; '
+            'charset=utf-8">')
+        out('<link rel="stylesheet" type="text/css" '
+            'href="%s.artwork/hsh-link-basic.css">' % BASE_PATH)
+        out('<link rel="stylesheet" type="text/css" '
+            'href="%s.artwork/hsh-link-%s.css">' % (BASE_PATH, theme))
         out('<script src="%s.artwork/hsh-link.js"></script>' % BASE_PATH)
         out('<title>%s</title>\n</head>' % BASE_URL)
         out('<body onLoad="body_loaded()">\n<div class="container">')
         out('<form action="%s" method="POST" enctype="multipart/form-data">'
             % BASE_PATH)
-        out('<div class="control"><a href="%s" title="start from scratch">clear</a>' % BASE_PATH)
+        out('<div class="control">'
+            '<a href="%s" title="start from scratch">clear</a>' % BASE_PATH)
         short_hash = data_hash and uniq_name(STORAGE_DIR, data_hash)
         out('<a title="short hash of content: %s" href="%s%s">short</a>'
             % (short_hash, BASE_PATH, short_hash))

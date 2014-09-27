@@ -1,22 +1,8 @@
-/*
-	vim: tabstop=4
-*/
-@font-face { font-family:dina; src:url(/.artwork/dina10px.ttf); }
-@font-face { font-family:dinabf; src:url(/.artwork/dina10pxbold.ttf); }
-
-textarea,input,select { border-style:None; background:transparent; }
-.text { height: 90vh; margin-top:3px; margin-bottom:3px; }
-.link { width: 25%; }
-textarea { height:100%; width:100%; margin:0px; }
+textarea,input,select { border:None; }
 
 @media screen {
-	body { font-family:dina; background-color:#2d2d2d; color:#729fcf; }
+	body { background-color:#2d2d2d; color:#729fcf; }
 	textarea,input,select { background-color:black; color:#729fcf; }
-	a { text-decoration:none; }
 	a:link,a:visited,a:active { color:#b8cfe7; }
 	a:hover { color:white; }
-}
-
-@media print {
-	.control,.footer{ display: none; }
 }
