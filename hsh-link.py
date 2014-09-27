@@ -294,7 +294,7 @@ def handler(req):
             'theme=<a href="?theme=xmw">xmw</a> '
             '<a href="?theme=white">white</a>'
             ' line=<input type="text" name="lineno" '
-            'id="lineno" value="" size="4" readonly>')
+            'id="lineno" value="1" size="4" readonly>')
         out('<a href="http://www.multipath-tcp.org/">mptcp</a>=%s'
             % (is_mptcp(req) and 'yes' or 'no'))
         out('mimetype=%s' % magic.Magic(magic.MAGIC_MIME).from_buffer(data.encode()).decode())
