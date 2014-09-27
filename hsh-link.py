@@ -169,7 +169,7 @@ def handler(req):
             if get_last_value('linefeed') == 'unix':
                 content = content.replace('\r\n', '\n')
     if content != None:
-        if get_last_value('append', None) == None:
+        if get_last_value('append') in (None, '0'):
             data = ''
         data = data + content
         if len(data) > FILE_SIZE_MAX:
