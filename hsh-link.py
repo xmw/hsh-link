@@ -257,14 +257,14 @@ def handler(req):
             out('link=<a title="latest revision of link: %s" '
                 'href="%s%s">%s</a>' % (link, BASE_PATH, link, link))
             out('<input type="hidden" name="link" value="%s">' % link)
-            if get_link(link, rev - 1, None):
+            if rev != None and get_link(link, rev - 1, None):
                 out('rev=<a title="previous revision of link: %s" '
                     'href="?rev=%s">-</a>' % (rev - 1, rev - 1))
             else:
                 out('rev=&nbsp;')
             out('<a title="current revision of link: %s" '
-                'href="?rev=%i">%i</a>' % ( rev, rev, rev ))
-            if get_link(link, rev + 1, None):
+                'href="?rev=%i">%i</a>' % ( rev or 0, rev or 0, rev or 0))
+            if rev != None and get_link(link, rev + 1, None):
                 out('<a title="next revision of link: %s" '
                     'href="?rev=%s">+</a>' % (rev + 1, rev + 1))
             else:
