@@ -3,7 +3,7 @@
 # copyright Michael Weber (michael at xmw dot de) 2014
 
 from config import STORAGE_DIR, LINK_DIR, FILE_SIZE_MAX, MIME_ALLOWED, BASE_PROTO, BASE_PATH, COOKIE_SECRET, THEMES
-OUTPUT = 'raw', 'html', 'link', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
+OUTPUT = 'raw', 'html', 'long', 'short', 'qr', 'qr_png', 'qr_utf8', 'qr_ascii'
 
 import base64, hashlib, io, ipaddress, magic, mod_python.util, mod_python.apache, mod_python.Cookie, os, PIL.ImageOps, qrencode, re, time
 
@@ -197,7 +197,7 @@ def handler(req):
     else:
         agent, output = 'text', 'raw'
         if content:
-            output = 'link'
+            output = 'long'
     output = get_last_value('output', output)
     if output == 'qr':
         output = agent == 'graphic' and 'qr_png' or 'qr_utf8'
@@ -333,7 +333,7 @@ def handler(req):
     elif output == 'raw':
         req.content_type = ''
         out(data)
-    elif output == 'link':
+    elif output == 'long':
         out("%s%s\n" % (BASE_URL, data_hash))
     elif output == 'short':
         out("%s%s\n" % (BASE_URL, uniq_name(STORAGE_DIR, data_hash)))
