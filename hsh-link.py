@@ -231,7 +231,7 @@ def handler(req):
     out = text.append
     if output == 'html':
         # handle theme
-        theme = THEMES[0]
+        theme = THEMES[1]
         cookie = mod_python.Cookie.get_cookie(req, 'theme', mod_python.Cookie.MarshalCookie, secret=COOKIE_SECRET)
         if type(cookie) is mod_python.Cookie.MarshalCookie:
             if cookie.value in THEMES:
